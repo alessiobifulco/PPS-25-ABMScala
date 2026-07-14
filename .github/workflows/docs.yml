@@ -50,7 +50,9 @@ jobs:
       - name: Add coverage report to pages
         run: |
           sudo mkdir -p public/coverage
-          sudo cp -r target/scala-3.3.8/scoverage-report/* public/coverage/
+          if [ -d "target/scala-3.3.8/scoverage-report" ]; then
+            sudo cp -r target/scala-3.3.8/scoverage-report/* public/coverage/
+          fi
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
