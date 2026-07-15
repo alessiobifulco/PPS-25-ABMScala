@@ -22,3 +22,6 @@ A fine sprint verrà creato un file `sprintN-review.md` contenente:
 - [Sprint 2](sprint2.md)
 - [Sprint 3](sprint3.md)
 - [Sprint 4](sprint4.md)
+
+## Indice
+- [Indice](../0-index.md)
