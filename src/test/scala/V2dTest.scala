@@ -19,14 +19,14 @@ class V2dTest extends AnyFlatSpec with Matchers:
   it should "have length zero" in:
     V2d.zero.length shouldBe 0.0
 
-  "normalized" should "produce a unit-length vector" in :
+  "normalized" should "produce a unit-length vector" in:
     V2d(3, 4).normalized.length shouldBe 1.0 +- 1e-9
 
-  it should "preserve direction" in :
+  it should "preserve direction" in:
     val n = V2d(6, 8).normalized
     n.x shouldBe 0.6 +- 1e-9
     n.y shouldBe 0.8 +- 1e-9
 
-  it should "map the zero vector to itself" in :
+  it should "map the zero vector to itself" in:
     V2d.zero.normalized shouldBe V2d.zero
   V2d.random().length shouldBe 1.0 +- 1e-9
