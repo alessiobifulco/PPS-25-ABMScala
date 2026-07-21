@@ -10,16 +10,13 @@ trait Environment[S]:
 
   def neighborsOf(agent: Agent[S], radius: Double): List[Agent[S]]
 
-
 object Environment:
 
-  def apply[S](bounds: Bounds, agents: List[Agent[S]]): Environment[S] =
-    EnvironmentImpl(bounds, agents)
+  def apply[S](bounds: Bounds, agents: List[Agent[S]]): Environment[S] = EnvironmentImpl(bounds, agents)
 
   private final case class EnvironmentImpl[S](bounds: Bounds, agents: List[Agent[S]]) extends Environment[S]:
 
-    override def withAgents(newAgents: List[Agent[S]]): Environment[S] =
-      copy(agents = newAgents)
+    override def withAgents(newAgents: List[Agent[S]]): Environment[S] = copy(agents = newAgents)
 
     override def neighborsOf(agent: Agent[S], radius: Double): List[Agent[S]] =
 
@@ -27,8 +24,7 @@ object Environment:
       val radiusSquared = radius * radius
 
       agents.filter { other =>
-        other.id != agent.id &&
-          distanceSquared(agent.position, other.position) <= radiusSquared
+        other.id != agent.id && distanceSquared(agent.position, other.position) <= radiusSquared
       }
 
     private def distanceSquared(first: P2d, second: P2d): Double =
