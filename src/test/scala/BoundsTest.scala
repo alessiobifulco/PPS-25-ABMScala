@@ -1,4 +1,4 @@
-import domain.{Bounds, P2d, V2d}
+import domain.{Bounds, P2d, RectangularSpace, V2d}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -12,11 +12,15 @@ class BoundsTest extends AnyFlatSpec with Matchers:
     bounds.width shouldBe width
     bounds.height shouldBe height
 
-  it should "reject negative dimensions" in:
+  it should "reject negative or zero dimensions" in:
     an[IllegalArgumentException] should be thrownBy:
       Bounds(-1.0, height)
     an[IllegalArgumentException] should be thrownBy:
       Bounds(width, -1.0)
+    an[IllegalArgumentException] should be thrownBy :
+      Bounds(0.0, height)
+    an[IllegalArgumentException] should be thrownBy :
+      Bounds(width, 0.0)
 
   it should "contain internal positions" in:
     bounds.contains(P2d(20.0, 20.0)) shouldBe true
@@ -44,3 +48,13 @@ class BoundsTest extends AnyFlatSpec with Matchers:
 
   it should "bounce on the vertical boundaries" in:
     bounds.bounce(P2d(20.0, height), V2d(1.0, 2.0)) shouldBe (P2d(20.0, height), V2d(1.0, -2.0))
+
+  it should "behave like RectangularSpace" in :
+    val space = RectangularSpace(width, height)
+    val position = P2d(20.0, 20.0)
+    val velocity = V2d(-2.0, 1.0)
+    val boundsResult = bounds.bounce(position, velocity)
+    val spaceResult = space.bounce(position, velocity)
+    bounds.contains(position) shouldBe space.contains(position)
+    bounds.clamp(position) shouldBe space.clamp(position)
+    boundsResult shouldBe spaceResult
