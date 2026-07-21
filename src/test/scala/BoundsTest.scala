@@ -17,9 +17,9 @@ class BoundsTest extends AnyFlatSpec with Matchers:
       Bounds(-1.0, height)
     an[IllegalArgumentException] should be thrownBy:
       Bounds(width, -1.0)
-    an[IllegalArgumentException] should be thrownBy :
+    an[IllegalArgumentException] should be thrownBy:
       Bounds(0.0, height)
-    an[IllegalArgumentException] should be thrownBy :
+    an[IllegalArgumentException] should be thrownBy:
       Bounds(width, 0.0)
 
   it should "contain internal positions" in:
@@ -49,7 +49,7 @@ class BoundsTest extends AnyFlatSpec with Matchers:
   it should "bounce on the vertical boundaries" in:
     bounds.bounce(P2d(20.0, height), V2d(1.0, 2.0)) shouldBe (P2d(20.0, height), V2d(1.0, -2.0))
 
-  it should "behave like RectangularSpace" in :
+  it should "behave like RectangularSpace" in:
     val space = RectangularSpace(width, height)
     val position = P2d(20.0, 20.0)
     val velocity = V2d(-2.0, 1.0)
