@@ -1,6 +1,6 @@
 # Sprint 0 — Review
 
-**Data:** 20/07/2026
+**Data:** 21/07/2026
 
 ## Legenda
 - **AB** — Alessio Bifulco
