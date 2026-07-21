@@ -9,8 +9,11 @@ class BehaviorTest extends AnyFlatSpec with Matchers:
     b(5) shouldBe List(Move(V2d(5, 5)))
 
   "Behavior.fromGraph" should "resolve the graph on the given context" in:
-    val graph = ActionGraph
-      .Branch[String, Int](_ > 0, ActionGraph.leaf(Move(V2d(1, 0))), ActionGraph.leaf(Move(V2d(-1, 0))))
+    val graph = ActionGraph.Branch[String, Int](
+      _ > 0,
+      ActionGraph.Leaf(_ => List(Move(V2d(1, 0)))),
+      ActionGraph.Leaf(_ => List(Move(V2d(-1, 0))))
+    )
     val b = Behavior.fromGraph(graph)
 
     b(5) shouldBe List(Move(V2d(1, 0)))
