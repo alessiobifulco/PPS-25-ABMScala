@@ -70,3 +70,17 @@ object Agent:
 
   private case class AgentImpl[S](id: AgentId, position: P2d, velocity: V2d, state: S, memory: Option[Memory[S]])
       extends Agent[S]
+
+/** The local perception of an agent during a behavior evaluation. Not a global view of the environment, but the set of
+  * information an agent can use to decide its actions.
+  *
+  * @param focus
+  *   the agent this context is evaluated for.
+  * @param neighbors
+  *   the agents visible to `focus` within the configured radius.
+  * @param tick
+  *   the current discrete tick of the simulation.
+  * @tparam S
+  *   the type of state used by agents in the simulation.
+  */
+case class AgentContext[S](focus: Agent[S], neighbors: List[Agent[S]], tick: Int)
