@@ -1,41 +1,65 @@
-# Sprint 1 — Planning
+---
+title: Sprint 1
+layout: default
+nav_order: 0
+parent: Processo di Sviluppo
+---
 
-**Data inizio:** 21/07/2026
-**Data fine prevista:** 25/07/2026
-**Obiettivo:** Costruire gli elementi di base del dominio (Agent, Behavior, Action, P2d, V2d)
-e l'ambiente di simulazione (Environment, Bounds, BoundaryPolicy, NeighborStrategy), oltre
-alla base della view.
+# Sprint 1 - Setup & Dominio Base
 
-## Legenda
-- **AB** — Alessio Bifulco
-- **SF** — Samuele Ferri
+## Obiettivo
+
+L'obiettivo di questo primo Sprint è configurare il progetto e le pipeline di sviluppo,
+e realizzare le fondamenta del dominio del framework (Agent, Action, ActionGraph,
+Behavior, AgentContext, P2d, V2d) insieme all'ambiente di simulazione (Environment,
+Bounds, BoundaryPolicy, NeighborStrategy). Al termine dello sprint, il dominio base
+dovrà compilare con test verdi e la struttura iniziale della view dovrà essere pronta
+per l'integrazione del motore di simulazione negli sprint successivi.
+
+## Deadline
+
+La scadenza dello sprint è il 25/07/2026.
 
 ## Backlog
 
-| ID    | PB    | Task                                                              | Assegnato | Stima (h) | Stato |
-|-------|-------|-------------------------------------------------------------------|-----------|-----------|-------|
-| S1-01 | PB-02 | V2d: somma, scala, lunghezza, normalizzazione, random             | AB        | 2         | Done  |
-| S1-02 | PB-02 | P2d: traslazione, differenza                                      | AB        | 1         | Done  |
-| S1-03 | PB-02 | Agent (trait + companion), campi id/position/velocity/state       | AB        | 2         | Done  |
-| S1-04 | PB-02 | AgentId come opaque type su Int                                   | AB        | 1         | Done  |
-| S1-05 | PB-12 | Memory (versione minimale)                                        | AB        | 1         | Done  |
-| S1-06 | PB-03 | Action:                                                           | AB        | 1         | Done  |
-| S1-07 | PB-04 | Behavior:                                                         | AB        | 2         | To do |
-| S1-08 | PB-22 | ScalaDoc                                                          | AB        | 1         | To do |
-| S1-09 | PB-05 | Bounds:                                                           | SF        | 1.5       | To do |
-| S1-10 | PB-05 | BoundaryPolicy:                                                   | SF        | 1         | To do |
-| S1-11 | PB-05 | Environment                                                       | SF        | 2         | To do |
-| S1-12 | PB-06 | NeighborStrategy:                                                 | SF        | 1.5       | To do |
-| S1-13 | PB-10 | Base della view (struttura iniziale, no rendering completo)       | SF        | 2         | To do |
-| S1-14 | PB-22 | ScalaDoc su Environment, Bounds, BoundaryPolicy, NeighborStrategy | SF        | 1         | To do |
+| Nome                          | Descrizione                                                                   | Sprint Task                                                                     | Developer |
+|-------------------------------|-------------------------------------------------------------------------------|---------------------------------------------------------------------------------|-----------|
+| **Project Setup**             | Configurazione iniziale del repository, build tool e strumenti di sviluppo    | Creazione repository GitHub PPS-25-ABMScala                                     | AB + SF   |
+|                               |                                                                               | Configurazione SBT con Scala 3.3.8                                              | AB + SF   |
+|                               |                                                                               | Configurazione plugin SBT (assembly, scoverage, scalafmt)                       | AB + SF   |
+|                               |                                                                               | Configurazione .scalafmt.conf                                                   | AB + SF   |
+|                               |                                                                               | Configurazione ACT                                                              | AB + SF   |
+|                               |                                                                               | Invito SF al repository                                                         | AB + SF   |
+| **CI/CD**                     | Automazione dei processi di build, test e pubblicazione della documentazione  | GitHub Action CI                                                                | AB + SF   |
+|                               |                                                                               | GitHub Action Release                                                           | AB + SF   |
+|                               |                                                                               | GitHub Action Documentation e GitHub Pages                                      | AB + SF   |
+|                               |                                                                               | GitHub Action Release Sprint documentation                                      | AB + SF   |
+| **Documentazione iniziale**   | Stesura della documentazione di progetto e di processo                        | Scrittura docs/1-intro.md                                                       | AB        |
+|                               |                                                                               | Scrittura docs/2-process.md                                                     | AB        |
+|                               |                                                                               | Scrittura docs/3-analysis.md                                                    | AB        |
+|                               |                                                                               | Scrittura process/backlog.md                                                    | AB        |
+|                               |                                                                               | Scrittura process/sprint1.md                                                    | AB        |
+| **Vettori e posizioni**       | Astrazioni geometriche di base del dominio                                    | V2d: somma, scala, lunghezza, normalizzazione, random                           | AB        |
+|                               |                                                                               | P2d: traslazione, differenza                                                    | AB        |
+| **Agent**                     | Entità agente del framework, con identificatore type-safe e memoria opzionale | Agent (trait + companion), campi id/position/velocity/state                     | AB        |
+|                               |                                                                               | AgentId come opaque type su Int                                                 | AB        |
+|                               |                                                                               | Memory (versione minimale)                                                      | AB        |
+| **Action e Behavior**         | Astrazioni dichiarative per gli effetti e le decisioni di un agente           | Action: trait + Move, Nudge, ShareMemory, MultiAction; Action.flatten           | AB        |
+|                               |                                                                               | ActionGraph: Leaf, Branch, resolve                                              | AB        |
+|                               |                                                                               | Behavior: trait, apply, fromGraph, andThen                                      | AB        |
+|                               |                                                                               | AgentContext (focus, neighbors, tick)                                           | AB        |
+| **Environment**               | Spazio di simulazione, confini e strategie di calcolo dei vicini              | Bounds: contains, clamp, bounce                                                 | SF        |
+|                               |                                                                               | BoundaryPolicy: bounce, wrap                                                    | SF        |
+|                               |                                                                               | Environment (trait + companion)                                                 | SF        |
+|                               |                                                                               | NeighborStrategy: bruteForce (given), builder dichiarativo                      | SF        |
+| **View**                      | Base della componente grafica                                                 | Struttura iniziale della view (no rendering completo)                           | SF        |
+| **Documentazione del codice** | ScalaDoc sui membri pubblici introdotti nello sprint                          | ScalaDoc su Agent, AgentId, Memory, Action, ActionGraph, Behavior, AgentContext | AB        |
+|                               |                                                                               | ScalaDoc su Environment, Bounds, BoundaryPolicy, NeighborStrategy               | SF        |
 
-## Definition of Done
-- Tutti i tipi di dominio elencati compilano e hanno test verdi
-- ScalaDoc presente su tutti i membri pubblici introdotti
-- PR di ogni branch feature verso `develop` con test verdi in CI
+## Sprint Review
 
-## Link to Review
-- [Sprint 1 Review](sprint1_rw.md)
+TBD
 
-## Link to Backlog
-- [Backlog](backlog.md)
+## Sprint Retrospective
+
+TBD

@@ -9,10 +9,10 @@ entrambi i membri che contribuiscono attivamente allo sviluppo.
 
 ### Ruoli
 
-- **Product Owner / Esperto di dominio** — Alessio Bifulco: responsabile della
+- **Product Owner / Esperto di dominio** — Samuele Ferri: responsabile della
   visione del prodotto, della qualità del risultato finale e della coerenza
   con i requisiti definiti.
-- **Scrum Master / Sviluppatore** — Samuele Ferri: responsabile del
+- **Scrum Master / Sviluppatore** — Alessio Bifulco: responsabile del
   coordinamento del processo di sviluppo, della gestione del backlog e della
   cadenza degli sprint.
 
@@ -22,14 +22,17 @@ in modo equilibrato all'implementazione del sistema.
 ## Organizzazione degli Sprint
 
 Il lavoro è organizzato in **sprint settimanali** della durata di circa una
-settimana, con un carico di lavoro previsto di **15 ore per membro per sprint**.
+settimana, con un carico di lavoro previsto di **20 ore per membro per sprint**.
 
-Per ogni sprint sono previsti due momenti formali:
+Per ogni sprint sono previsti tre momenti formali:
 
 - **Sprint Planning** (inizio sprint): definizione dei task da completare,
   stima dell'effort e assegnazione delle responsabilità;
-- **Sprint Review** (fine sprint): verifica di quanto prodotto, confronto con
-  la definition of done e pianificazione dello sprint successivo.
+- **Sprint Review** (fine sprint): verifica di quanto prodotto rispetto
+  all'obiettivo dello sprint e alla definition of done;
+- **Sprint Retrospective** (fine sprint): valutazione del processo di lavoro
+  del team, con l'obiettivo di individuare miglioramenti per lo sprint
+  successivo.
 
 ### Definition of Done
 
@@ -42,14 +45,13 @@ Un task si considera completato quando:
 
 ## Strumenti
 
-| Strumento       | Utilizzo                         |
-|-----------------|----------------------------------|
-| Git + GitHub    | Versionamento del codice         |
-| SBT             | Build tool e gestione dipendenze |
-| GitHub Actions  | Continuous Integration           |
-| GitHub Projects | Gestione dei task e del backlog  |
-| ScalaTest       | Testing automatizzato            |
-| IntelliJ IDEA   | IDE di sviluppo                  |
+| Strumento       | Utilizzo                          |
+|-----------------|------------------------------------|
+| Git + GitHub    | Versionamento del codice           |
+| SBT             | Build tool e gestione dipendenze   |
+| GitHub Actions  | Continuous Integration             |
+| ScalaTest       | Testing automatizzato              |
+| IntelliJ IDEA   | IDE di sviluppo                    |
 
 ## Versionamento
 
@@ -57,8 +59,8 @@ Per i commit si adotta la convenzione **Conventional Commits**:
 
 - feat: nuova funzionalità
 - fix: correzione di bug
-- test: aggiunta property-based test
-- docs: aggiornamento documenti relativi progeto
+- test: aggiunta o modifica di test
+- docs: aggiornamento documenti relativi al progetto
 - chore: manutenzione varia, configurazioni, dipendenze
 - ci: continuous Integration / pipeline
 

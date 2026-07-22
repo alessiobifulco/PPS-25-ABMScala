@@ -35,7 +35,10 @@ realizzato in Scala 3.
 Le astrazioni fondamentali offerte dal framework sono:
 
 - **Agent**: entità autonoma con stato generico, posizione e velocità;
-- **Behavior**: funzione pura che determina il movimento dell'agente;
+- **Action**: effetto che un agente produce in un tick (movimento, modifica
+  dello stato di un altro agente, comunicazione);
+- **Behavior**: funzione pura che, dato il contesto locale di un agente,
+  determina le azioni che produce;
 - **Interaction Rule**: regola che governa i cambi di stato tra agenti vicini;
 - **Environment**: spazio bidimensionale continuo che contiene gli agenti.
 
