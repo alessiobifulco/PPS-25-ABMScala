@@ -8,7 +8,7 @@ trait Environment[S]:
 
   def withAgents(newAgents: List[Agent[S]]): Environment[S]
 
-  def neighborsOf(agent: Agent[S], radius: Double): List[Agent[S]]
+  def neighborsOf(agent: Agent[S], radius: Double)(using strategy: NeighborStrategy[S]): List[Agent[S]]
 
 object Environment:
 
@@ -18,16 +18,5 @@ object Environment:
 
     override def withAgents(newAgents: List[Agent[S]]): Environment[S] = copy(agents = newAgents)
 
-    override def neighborsOf(agent: Agent[S], radius: Double): List[Agent[S]] =
-
-      require(radius >= 0, "Radius must be non-negative")
-      val radiusSquared = radius * radius
-
-      agents.filter { other =>
-        other.id != agent.id && distanceSquared(agent.position, other.position) <= radiusSquared
-      }
-
-    private def distanceSquared(first: P2d, second: P2d): Double =
-      val deltaX = first.x - second.x
-      val deltaY = first.y - second.y
-      deltaX * deltaX + deltaY * deltaY
+    override def neighborsOf(agent: Agent[S], radius: Double)(using strategy: NeighborStrategy[S]): List[Agent[S]] =
+      strategy.neighborsOf(agent, agents, radius)
