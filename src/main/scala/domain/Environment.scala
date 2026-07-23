@@ -12,9 +12,11 @@ trait Environment[S]:
 
 object Environment:
 
-  def apply[S](bounds: Bounds, agents: List[Agent[S]]): Environment[S] = EnvironmentImpl(bounds, agents)
+  def apply[S](bounds: Bounds, agents: List[Agent[S]], boundaryPolicy: BoundaryPolicy = BouncePolicy): Environment[S] =
+    EnvironmentImpl(bounds, agents, boundaryPolicy)
 
-  private final case class EnvironmentImpl[S](bounds: Bounds, agents: List[Agent[S]]) extends Environment[S]:
+  private final case class EnvironmentImpl[S](bounds: Bounds, agents: List[Agent[S]], boundaryPolicy: BoundaryPolicy)
+      extends Environment[S]:
 
     override def withAgents(newAgents: List[Agent[S]]): Environment[S] = copy(agents = newAgents)
 
