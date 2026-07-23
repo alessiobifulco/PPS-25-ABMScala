@@ -1,4 +1,4 @@
-import domain.{RectangularSpace, P2d, V2d}
+import domain.{P2d, RectangularSpace, V2d, WrapPolicy}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -48,3 +48,7 @@ class RectangularSpaceTest extends AnyFlatSpec with Matchers:
 
   it should "bounce on the vertical boundaries" in:
     rectangularSpace.bounce(P2d(20.0, height), V2d(1.0, 2.0)) shouldBe (P2d(20.0, height), V2d(1.0, -2.0))
+
+  it should "wrap positions in a rectangular toroidal space" in:
+    val rectangularSpace = RectangularSpace(width = 100.0, height = 50.0)
+    WrapPolicy(P2d(-10.0, 60.0), V2d(2.0, 1.0), rectangularSpace) shouldBe (P2d(90.0, 10.0), V2d(2.0, 1.0))

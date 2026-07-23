@@ -1,4 +1,4 @@
-import domain.{CircularSpace, P2d, V2d}
+import domain.{CircularSpace, P2d, V2d, WrapPolicy}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -68,6 +68,7 @@ class CircularSpaceTest extends AnyFlatSpec with Matchers:
     val velocity = V2d(-2.0, 1.0)
     space.stop(position, velocity) shouldBe (position, velocity)
 
-  it should "not support wrapping" in:
-    an[UnsupportedOperationException] should be thrownBy:
-      space.wrap(P2d(20.0, 0.0))
+  it should "fallback to bounce for circular spaces" in:
+    val position = P2d(10.0, 0.0)
+    val velocity = V2d(2.0, 1.0)
+    WrapPolicy(position, velocity, space) shouldBe space.bounce(position, velocity)
