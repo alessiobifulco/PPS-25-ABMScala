@@ -45,3 +45,13 @@ class NeighborStrategyTest extends AnyFlatSpec with Matchers:
   it should "reject a negative radius" in:
     an[IllegalArgumentException] should be thrownBy:
       strategy.neighborsOf(agent1, agents, radius = -1.0)
+
+  it should "find the same neighbours with the grid strategy" in:
+    val strategy = NeighborStrategy.grid[String](10.0)
+    val neighbours = strategy.neighborsOf(agent1, agents, radius)
+    neighbours.toSet shouldBe Set(agent2, agentOnRadius)
+
+  it should "find the same neighbours with the spatial hash strategy" in:
+    val strategy = NeighborStrategy.spatialHash[String](10.0)
+    val neighbours = strategy.neighborsOf(agent1, agents, radius)
+    neighbours.toSet shouldBe Set(agent2, agentOnRadius)
