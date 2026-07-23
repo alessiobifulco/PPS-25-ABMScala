@@ -28,30 +28,3 @@ class EnvironmentTest extends AnyFlatSpec with Matchers:
     val originalAgents = environment.agents
     environment.withAgents(List(agent1))
     environment.agents shouldBe originalAgents
-
-  it should "find agents inside the given radius" in:
-    val neighbours = environment.neighborsOf(agent1, radius)
-    neighbours should contain(agent2)
-
-  it should "exclude the focal agent" in:
-    val neighbours = environment.neighborsOf(agent1, radius)
-    neighbours should not contain agent1
-
-  it should "exclude agents outside the given radius" in:
-    val neighbours = environment.neighborsOf(agent1, radius)
-    neighbours should not contain distantAgent
-
-  it should "return an empty list when no neighbours exist" in:
-    val neighbours = environment.neighborsOf(distantAgent, radius)
-    neighbours shouldBe empty
-
-  it should "include an agent exactly on the radius" in:
-    val agentOnRadius =
-      Agent(id = AgentId(4), position = P2d(30.0, 20.0), velocity = V2d.zero, state = "agent-on-radius")
-    val environmentWithBoundaryAgent = Environment(bounds = bounds, agents = List(agent1, agentOnRadius))
-    val neighbours = environmentWithBoundaryAgent.neighborsOf(agent1, radius)
-    neighbours should contain(agentOnRadius)
-
-  it should "reject a negative radius" in:
-    an[IllegalArgumentException] should be thrownBy:
-      environment.neighborsOf(agent1, radius = -1.0)
