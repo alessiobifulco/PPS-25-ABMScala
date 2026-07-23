@@ -7,3 +7,7 @@ trait Space:
   def clamp(position: P2d): P2d
 
   def bounce(position: P2d, velocity: V2d): (P2d, V2d)
+
+  def wrap(position: P2d): P2d
+
+  def stop(position: P2d, velocity: V2d): (P2d, V2d)

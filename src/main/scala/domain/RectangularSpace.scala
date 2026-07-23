@@ -17,3 +17,21 @@ final case class RectangularSpace(width: Double, height: Double) extends Space:
     val correctedVelocity =
       V2d(x = if shouldBounceX then -velocity.x else velocity.x, y = if shouldBounceY then -velocity.y else velocity.y)
     (correctedPosition, correctedVelocity)
+
+  override def wrap(position: P2d): P2d =
+    P2d(x = wrapCoordinate(position.x, width), y = wrapCoordinate(position.y, height))
+
+  override def stop(position: P2d, velocity: V2d): (P2d, V2d) =
+    val isOutside = position.x < 0 || position.x > width || position.y < 0 || position.y > height
+    val isTouchingBoundaryAndMovingOutward =
+      (position.x <= 0 && velocity.x < 0) ||
+        (position.x >= width && velocity.x > 0) ||
+        (position.y <= 0 && velocity.y < 0) ||
+        (position.y >= height && velocity.y > 0)
+    val correctedPosition = clamp(position)
+    val correctedVelocity = if isOutside || isTouchingBoundaryAndMovingOutward then V2d.zero else velocity
+    (correctedPosition, correctedVelocity)
+
+  private def wrapCoordinate(value: Double, size: Double): Double =
+    val remainder = value % size
+    if remainder < 0 then remainder + size else remainder
