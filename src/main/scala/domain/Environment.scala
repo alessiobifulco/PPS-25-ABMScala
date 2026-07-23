@@ -6,6 +6,8 @@ trait Environment[S]:
 
   def agents: List[Agent[S]]
 
+  def boundaryPolicy: BoundaryPolicy
+
   def withAgents(newAgents: List[Agent[S]]): Environment[S]
 
   def neighborsOf(agent: Agent[S], radius: Double)(using strategy: NeighborStrategy[S]): List[Agent[S]]
