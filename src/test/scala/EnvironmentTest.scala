@@ -1,4 +1,4 @@
-import domain.{Agent, AgentId, Bounds, Environment, P2d, V2d}
+import domain.{Agent, AgentId, BouncePolicy, BoundaryPolicy, Bounds, Environment, P2d, V2d}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -28,3 +28,6 @@ class EnvironmentTest extends AnyFlatSpec with Matchers:
     val originalAgents = environment.agents
     environment.withAgents(List(agent1))
     environment.agents shouldBe originalAgents
+
+  it should "use BouncePolicy by default" in:
+    environment.boundaryPolicy shouldBe BouncePolicy
