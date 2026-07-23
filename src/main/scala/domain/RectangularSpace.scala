@@ -1,7 +1,6 @@
 package domain
 
-final case class RectangularSpace(width: Double, height: Double) extends Space:
-
+final case class RectangularSpace(width: Double, height: Double) extends Space with Toroidal:
   require(width > 0, "Width must be positive")
   require(height > 0, "Height must be positive")
 
@@ -13,24 +12,21 @@ final case class RectangularSpace(width: Double, height: Double) extends Space:
   override def bounce(position: P2d, velocity: V2d): (P2d, V2d) =
     val shouldBounceX = (position.x <= 0 && velocity.x < 0) || (position.x >= width && velocity.x > 0)
     val shouldBounceY = (position.y <= 0 && velocity.y < 0) || (position.y >= height && velocity.y > 0)
-    val correctedPosition = clamp(position)
     val correctedVelocity =
       V2d(x = if shouldBounceX then -velocity.x else velocity.x, y = if shouldBounceY then -velocity.y else velocity.y)
-    (correctedPosition, correctedVelocity)
+    (clamp(position), correctedVelocity)
 
   override def wrap(position: P2d): P2d =
     P2d(x = wrapCoordinate(position.x, width), y = wrapCoordinate(position.y, height))
 
   override def stop(position: P2d, velocity: V2d): (P2d, V2d) =
-    val isOutside = position.x < 0 || position.x > width || position.y < 0 || position.y > height
-    val isTouchingBoundaryAndMovingOutward =
+    val isOutside = !contains(position)
+    val isMovingOutward =
       (position.x <= 0 && velocity.x < 0) ||
         (position.x >= width && velocity.x > 0) ||
         (position.y <= 0 && velocity.y < 0) ||
         (position.y >= height && velocity.y > 0)
-    val correctedPosition = clamp(position)
-    val correctedVelocity = if isOutside || isTouchingBoundaryAndMovingOutward then V2d.zero else velocity
-    (correctedPosition, correctedVelocity)
+    (clamp(position), if isOutside || isMovingOutward then V2d.zero else velocity)
 
   private def wrapCoordinate(value: Double, size: Double): Double =
     val remainder = value % size
