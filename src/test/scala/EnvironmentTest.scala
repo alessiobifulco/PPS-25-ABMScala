@@ -1,4 +1,4 @@
-import domain.{Agent, AgentId, BouncePolicy, BoundaryPolicy, Environment, P2d, RectangularSpace, V2d}
+import domain.{Agent, AgentId, BouncePolicy, BoundaryPolicy, Environment, NeighborStrategy, P2d, RectangularSpace, V2d}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -31,3 +31,10 @@ class EnvironmentTest extends AnyFlatSpec with Matchers:
 
   it should "use BouncePolicy by default" in:
     environment.boundaryPolicy shouldBe BouncePolicy
+
+  it should "find the neighbors of an agent using the provided strategy" in:
+    given NeighborStrategy[String] = NeighborStrategy.bruteForce[String]
+    val neighbors = environment.neighborsOf(agent1, radius)
+    neighbors should contain(agent2)
+    neighbors should not contain distantAgent
+    neighbors should not contain agent1
