@@ -1,19 +1,19 @@
-import domain.{Agent, AgentId, BouncePolicy, BoundaryPolicy, Bounds, Environment, P2d, V2d}
+import domain.{Agent, AgentId, BouncePolicy, BoundaryPolicy, Environment, P2d, RectangularSpace, V2d}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 class EnvironmentTest extends AnyFlatSpec with Matchers:
 
-  private val bounds = Bounds(width = 100.0, height = 50.0)
+  private val space = RectangularSpace(width = 100.0, height = 50.0)
   private val radius = 10.0
   private val agent1 = Agent(id = AgentId(1), position = P2d(20.0, 20.0), velocity = V2d.zero, state = "agent-1")
   private val agent2 = Agent(id = AgentId(2), position = P2d(25.0, 20.0), velocity = V2d.zero, state = "agent-2")
   private val distantAgent =
     Agent(id = AgentId(3), position = P2d(80.0, 20.0), velocity = V2d.zero, state = "distant-agent")
-  private val environment = Environment(bounds = bounds, agents = List(agent1, agent2, distantAgent))
+  private val environment = Environment(space = space, agents = List(agent1, agent2, distantAgent))
 
-  "Environment" should "preserve its bounds" in:
-    environment.bounds shouldBe bounds
+  "Environment" should "preserve its space" in:
+    environment.space shouldBe space
 
   it should "contain the given agents" in:
     environment.agents shouldBe List(agent1, agent2, distantAgent)
