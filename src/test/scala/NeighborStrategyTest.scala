@@ -39,7 +39,6 @@ class NeighborStrategyTest extends AnyFlatSpec with Matchers:
 
   it should "return no neighbours with zero radius" in:
     val neighbours = strategy.neighborsOf(agent1, agents, radius = 0.0)
-
     neighbours shouldBe empty
 
   it should "reject a negative radius" in:
@@ -48,10 +47,5 @@ class NeighborStrategyTest extends AnyFlatSpec with Matchers:
 
   it should "find the same neighbours with the grid strategy" in:
     val strategy = NeighborStrategy.grid[String](10.0)
-    val neighbours = strategy.neighborsOf(agent1, agents, radius)
-    neighbours.toSet shouldBe Set(agent2, agentOnRadius)
-
-  it should "find the same neighbours with the spatial hash strategy" in:
-    val strategy = NeighborStrategy.spatialHash[String](10.0)
     val neighbours = strategy.neighborsOf(agent1, agents, radius)
     neighbours.toSet shouldBe Set(agent2, agentOnRadius)

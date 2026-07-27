@@ -1,4 +1,4 @@
-import domain.{P2d, RectangularSpace, V2d, WrapPolicy}
+import domain.{P2d, RectangularSpace, V2d, WrapPolicy, Shape}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -50,5 +50,12 @@ class RectangularSpaceTest extends AnyFlatSpec with Matchers:
     rectangularSpace.bounce(P2d(20.0, height), V2d(1.0, 2.0)) shouldBe (P2d(20.0, height), V2d(1.0, -2.0))
 
   it should "wrap positions in a rectangular toroidal space" in:
-    val rectangularSpace = RectangularSpace(width = 100.0, height = 50.0)
-    WrapPolicy(P2d(-10.0, 60.0), V2d(2.0, 1.0), rectangularSpace) shouldBe (P2d(90.0, 10.0), V2d(2.0, 1.0))
+    val toroidalSpace = RectangularSpace(width = 100.0, height = 50.0)
+    WrapPolicy(P2d(-10.0, 60.0), V2d(2.0, 1.0), toroidalSpace) shouldBe (P2d(90.0, 10.0), V2d(2.0, 1.0))
+
+  it should "generate a random position within the rectangle bounds" in:
+    val pos = rectangularSpace.randomPosition
+    rectangularSpace.contains(pos) shouldBe true
+
+  it should "return the correct Shape enum" in:
+    rectangularSpace.shape shouldBe Shape.Rectangle(P2d(0, 0), width, height)

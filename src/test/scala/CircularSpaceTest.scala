@@ -1,4 +1,4 @@
-import domain.{CircularSpace, P2d, V2d, WrapPolicy}
+import domain.{CircularSpace, P2d, V2d, WrapPolicy, Shape}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -53,6 +53,9 @@ class CircularSpaceTest extends AnyFlatSpec with Matchers:
     val velocity = V2d(1.0, 2.0)
     space.bounce(position, velocity) shouldBe (P2d(0.0, radius), V2d(1.0, -2.0))
 
+  it should "bounce correctly when exactly at the center (distance == 0)" in:
+    space.bounce(center, V2d(1.0, 1.0)) shouldBe (center, V2d(1.0, 1.0))
+
   it should "stop an external position" in:
     val position = P2d(20.0, 0.0)
     val velocity = V2d(2.0, 1.0)
@@ -68,7 +71,14 @@ class CircularSpaceTest extends AnyFlatSpec with Matchers:
     val velocity = V2d(-2.0, 1.0)
     space.stop(position, velocity) shouldBe (position, velocity)
 
-  it should "fallback to bounce for circular spaces" in:
+  it should "fallback to bounce for circular spaces when using WrapPolicy" in:
     val position = P2d(10.0, 0.0)
     val velocity = V2d(2.0, 1.0)
     WrapPolicy(position, velocity, space) shouldBe space.bounce(position, velocity)
+
+  it should "generate a random position within the circle" in:
+    val pos = space.randomPosition
+    space.contains(pos) shouldBe true
+
+  it should "return the correct Shape enum" in:
+    space.shape shouldBe Shape.Circle(center, radius)
