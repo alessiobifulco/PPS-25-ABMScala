@@ -5,6 +5,8 @@ trait Space:
   def clamp(position: P2d): P2d
   def bounce(position: P2d, velocity: V2d): (P2d, V2d)
   def stop(position: P2d, velocity: V2d): (P2d, V2d)
+  def randomPosition: P2d
+  def shape: Shape
 
 trait Toroidal:
   def wrap(position: P2d): P2d
