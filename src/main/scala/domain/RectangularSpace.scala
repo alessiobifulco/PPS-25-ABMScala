@@ -28,6 +28,10 @@ final case class RectangularSpace(width: Double, height: Double) extends Space w
         (position.y >= height && velocity.y > 0)
     (clamp(position), if isOutside || isMovingOutward then V2d.zero else velocity)
 
+  override def randomPosition: P2d = P2d(math.random() * width, math.random() * height)
+
+  override def shape: Shape = Shape.Rectangle(P2d(0, 0), width, height)
+
   private def wrapCoordinate(value: Double, size: Double): Double =
     val remainder = value % size
     if remainder < 0 then remainder + size else remainder

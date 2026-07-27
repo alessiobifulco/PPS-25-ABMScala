@@ -20,7 +20,7 @@ final case class CircularSpace(center: P2d, radius: Double) extends Space:
     else
       val normal = V2d(x = offset.x / distance, y = offset.y / distance)
       val alongNormal = velocity.x * normal.x + velocity.y * normal.y
-      val shouldBounce = distance >= radius && alongNormal > 0 || distance > radius
+      val shouldBounce = distance > radius || (distance >= radius && alongNormal > 0)
       val correctedVelocity =
         if shouldBounce then V2d(velocity.x - 2 * alongNormal * normal.x, velocity.y - 2 * alongNormal * normal.y)
         else velocity
@@ -31,5 +31,12 @@ final case class CircularSpace(center: P2d, radius: Double) extends Space:
     val distance = offset.length
     val isMovingOutward = distance > 0 && (velocity.x * offset.x / distance + velocity.y * offset.y / distance) > 0
     (clamp(position), if distance > radius || isMovingOutward then V2d.zero else velocity)
+
+  override def randomPosition: P2d =
+    val angle = math.random() * 2 * math.Pi
+    val distance = radius * math.sqrt(math.random())
+    P2d(x = center.x + distance * math.cos(angle), y = center.y + distance * math.sin(angle))
+
+  override def shape: Shape = Shape.Circle(center, radius)
 
   private def relativeToCenter(position: P2d): V2d = V2d(x = position.x - center.x, y = position.y - center.y)
