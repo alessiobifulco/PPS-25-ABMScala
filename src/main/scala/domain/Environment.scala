@@ -6,6 +6,7 @@ trait Environment[S]:
   def boundaryPolicy: BoundaryPolicy
   def withAgents(newAgents: List[Agent[S]]): Environment[S]
   def neighborsOf(agent: Agent[S], radius: Double)(using strategy: NeighborStrategy[S]): List[Agent[S]]
+  def neighborhoods(radius: Double)(using strategy: NeighborStrategy[S]): Agent[S] => List[Agent[S]]
 
 object Environment:
   def apply[S](space: Space, agents: List[Agent[S]], boundaryPolicy: BoundaryPolicy = BouncePolicy): Environment[S] =
@@ -14,6 +15,11 @@ object Environment:
 
   private final case class EnvironmentImpl[S](space: Space, agents: List[Agent[S]], boundaryPolicy: BoundaryPolicy)
       extends Environment[S]:
+
     override def withAgents(newAgents: List[Agent[S]]): Environment[S] = copy(agents = newAgents)
+
     override def neighborsOf(agent: Agent[S], radius: Double)(using strategy: NeighborStrategy[S]): List[Agent[S]] =
       strategy.neighborsOf(agent, agents, radius)
+
+    override def neighborhoods(radius: Double)(using strategy: NeighborStrategy[S]): Agent[S] => List[Agent[S]] =
+      strategy.prepare(agents, radius)
