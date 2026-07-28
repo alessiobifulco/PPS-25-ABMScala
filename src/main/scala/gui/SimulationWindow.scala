@@ -34,7 +34,7 @@ object SimulationWindow:
 
     val dim = config.initialEnvironment.space.shape match
       case Shape.Rectangle(_, width, height) => new Dimension(width.toInt, height.toInt)
-      case Shape.Circle(_, radius) => new Dimension((radius * 2).toInt, (radius * 2).toInt)
+      case Shape.Circle(_, radius)           => new Dimension((radius * 2).toInt, (radius * 2).toInt)
 
     simulationPanel.setPreferredSize(dim)
     frame.setLayout(new BorderLayout)
