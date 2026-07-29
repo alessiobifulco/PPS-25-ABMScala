@@ -6,13 +6,13 @@ import simulations.OpinionDynamics.given
 
 @main
 def run(): Unit =
-  val options = List(
+  val options: List[SimulationOption] = List(
     new SimulationOption:
       def name: String = "Sim 1 - Epidemia"
-      def start(): Unit = SimulationWindow.open("Epidemia", Epidemic.config)
+      def start(onBack: () => Unit): Unit = SimulationWindow.open("Epidemia", Epidemic.config, onBack)
     ,
     new SimulationOption:
       def name: String = "Sim 2 - Opinion Dynamics"
-      def start(): Unit = SimulationWindow.open("Opinion Dynamics", OpinionDynamics.config)
+      def start(onBack: () => Unit): Unit = SimulationWindow.open("Opinion Dynamics", OpinionDynamics.config, onBack)
   )
   MainMenu.open(options)
