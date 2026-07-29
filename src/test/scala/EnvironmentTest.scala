@@ -1,16 +1,5 @@
-import domain.{
-  Agent,
-  AgentId,
-  BouncePolicy,
-  BoundaryPolicy,
-  CircularSpace,
-  Environment,
-  NeighborStrategy,
-  P2d,
-  RectangularSpace,
-  V2d,
-  WrapPolicy
-}
+import domain.BoundaryPolicy.bounce
+import domain.{Agent, AgentId, BoundaryPolicy, CircularSpace, Environment, NeighborStrategy, P2d, RectangularSpace, V2d}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -42,7 +31,7 @@ class EnvironmentTest extends AnyFlatSpec with Matchers:
     environment.agents shouldBe originalAgents
 
   it should "use BouncePolicy by default" in:
-    environment.boundaryPolicy shouldBe BouncePolicy
+    environment.boundaryPolicy shouldBe BoundaryPolicy.bounce
 
   it should "find the neighbors of an agent using the provided strategy" in:
     given NeighborStrategy[String] = NeighborStrategy.bruteForce[String]
@@ -62,6 +51,6 @@ class EnvironmentTest extends AnyFlatSpec with Matchers:
     val nonToroidalSpace = CircularSpace(center = P2d(0.0, 0.0), radius = 10.0)
 
     val exception = the[IllegalArgumentException] thrownBy:
-      Environment(space = nonToroidalSpace, agents = List.empty, boundaryPolicy = WrapPolicy)
+      Environment(space = nonToroidalSpace, agents = List.empty, boundaryPolicy = BoundaryPolicy.wrap)
 
     exception.getMessage should include("WrapPolicy requires a toroidal space")
