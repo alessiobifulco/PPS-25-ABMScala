@@ -1,27 +1,52 @@
 package gui
 
-import java.awt.GridLayout
-import javax.swing.{JButton, JFrame, JPanel}
+import java.awt.{BorderLayout, Dimension, Font, GridBagConstraints, GridBagLayout, Insets}
+import javax.swing.{BorderFactory, JButton, JFrame, JLabel, JPanel, SwingConstants, WindowConstants}
 
 trait SimulationOption:
   def name: String
-  def start(): Unit
+  def start(onBack: () => Unit): Unit
 
 object MainMenu:
-  private val windowWidth = 350
-  private val windowHeight = 250
-  private val menuGap = 10
+  private val InitialWidth = 400
+  private val InitialHeight = 350
+  private val ButtonMaxWidth = 300
+  private val ButtonMaxHeight = 45
+  private val TitleFontSize = 24f
+  private val TitlePadding = 20
+  private val ButtonGap = 10
 
   def open(options: List[SimulationOption]): Unit =
-    val frame = JFrame("ABMScala")
-    val panel = new JPanel(new GridLayout(options.size.max(1), 1, menuGap, menuGap))
+    val frame = new JFrame("ABMScala")
 
-    options.foreach: option =>
+    val titleLabel = new JLabel("ABMScala", SwingConstants.CENTER)
+    titleLabel.setFont(titleLabel.getFont.deriveFont(Font.BOLD, TitleFontSize))
+    titleLabel.setBorder(BorderFactory.createEmptyBorder(TitlePadding, 0, TitlePadding, 0))
+
+    val buttonPanel = new JPanel(new GridBagLayout)
+    val constraints = new GridBagConstraints
+    constraints.gridx = 0
+    constraints.fill = GridBagConstraints.HORIZONTAL
+    constraints.insets = new Insets(ButtonGap / 2, 0, ButtonGap / 2, 0)
+
+    options.zipWithIndex.foreach: (option, i) =>
       val button = new JButton(option.name)
-      button.addActionListener(_ => option.start())
-      panel.add(button)
+      button.setMaximumSize(new Dimension(ButtonMaxWidth, ButtonMaxHeight))
+      button.setPreferredSize(new Dimension(ButtonMaxWidth, ButtonMaxHeight))
+      button.addActionListener: _ =>
+        frame.setVisible(false)
+        option.start(() => frame.setVisible(true))
+      constraints.gridy = i
+      buttonPanel.add(button, constraints)
 
-    frame.add(panel)
-    frame.setSize(windowWidth, windowHeight)
+    val centerPanel = new JPanel(new GridBagLayout)
+    centerPanel.add(buttonPanel)
+
+    frame.setLayout(new BorderLayout)
+    frame.add(titleLabel, BorderLayout.NORTH)
+    frame.add(centerPanel, BorderLayout.CENTER)
+    frame.setSize(InitialWidth, InitialHeight)
+    frame.setResizable(true)
     frame.setLocationByPlatform(true)
+    frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE)
     frame.setVisible(true)

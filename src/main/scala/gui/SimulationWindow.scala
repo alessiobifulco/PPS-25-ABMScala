@@ -2,20 +2,26 @@ package gui
 
 import domain.Shape
 import engine.SimulationConfig
-
-import java.awt.{BorderLayout, Dimension}
-import javax.swing.{JButton, JFrame, JPanel, Timer, WindowConstants}
-import java.awt.event.{ActionEvent, WindowAdapter, WindowEvent}
+import java.awt.BorderLayout
+import java.awt.Dimension
+import java.awt.event.ActionEvent
+import java.awt.event.WindowAdapter
+import java.awt.event.WindowEvent
+import javax.swing.JButton
+import javax.swing.JFrame
+import javax.swing.JPanel
+import javax.swing.Timer
+import javax.swing.WindowConstants
 
 object SimulationWindow:
+  private val TimerDelayMs = 30
 
-  private val timerDelayMs = 30
-
-  def open[S](title: String, config: SimulationConfig[S])(using Renderable[S]): Unit =
+  def open[S](title: String, config: SimulationConfig[S], onBack: () => Unit)(using Renderable[S]): Unit =
     var model = Mvu.init(config)
     val simulationPanel = new SimulationPanel[S]
-    val toggleButton = new JButton("Stop")
+    val toggleButton = new JButton("Resume")
     val restartButton = new JButton("Restart")
+    val backButton = new JButton("<- Back")
     val controlPanel = new JPanel
     val frame = new JFrame(title)
 
@@ -27,14 +33,21 @@ object SimulationWindow:
       model = Mvu.update(model, msg)
       refreshView()
 
-    val timer = new Timer(timerDelayMs, (_: ActionEvent) => dispatch(Msg.Tick))
+    val timer = new Timer(TimerDelayMs, (_: ActionEvent) => dispatch(Msg.Tick))
 
     toggleButton.addActionListener(_ => dispatch(Msg.ToggleRun))
     restartButton.addActionListener(_ => dispatch(Msg.Restart))
+    backButton.addActionListener: _ =>
+      timer.stop()
+      frame.dispose()
+      onBack()
+    controlPanel.add(backButton)
+    controlPanel.add(toggleButton)
+    controlPanel.add(restartButton)
 
     val dim = config.initialEnvironment.space.shape match
-      case Shape.Rectangle(_, width, height) => new Dimension(width.toInt, height.toInt)
-      case Shape.Circle(_, radius)           => new Dimension((radius * 2).toInt, (radius * 2).toInt)
+      case Shape.Rectangle(_, w, h) => new Dimension(w.toInt, h.toInt)
+      case Shape.Circle(_, r)       => new Dimension((r * 2).toInt, (r * 2).toInt)
 
     simulationPanel.setPreferredSize(dim)
     frame.setLayout(new BorderLayout)
@@ -42,7 +55,7 @@ object SimulationWindow:
     frame.add(controlPanel, BorderLayout.SOUTH)
     frame.pack()
     frame.setLocationByPlatform(true)
-    frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE)
+    frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE)
     frame.addWindowListener(
       new WindowAdapter:
         override def windowClosed(e: WindowEvent): Unit = timer.stop()
