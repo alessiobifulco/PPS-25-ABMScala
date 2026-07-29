@@ -9,8 +9,15 @@ trait Environment[S]:
   def neighborhoods(radius: Double)(using strategy: NeighborStrategy[S]): Agent[S] => List[Agent[S]]
 
 object Environment:
-  def apply[S](space: Space, agents: List[Agent[S]], boundaryPolicy: BoundaryPolicy = BouncePolicy): Environment[S] =
-    require(boundaryPolicy != WrapPolicy || space.isInstanceOf[Toroidal], "WrapPolicy requires a toroidal space")
+  def apply[S](
+      space: Space,
+      agents: List[Agent[S]],
+      boundaryPolicy: BoundaryPolicy = BoundaryPolicy.bounce
+  ): Environment[S] =
+    require(
+      boundaryPolicy != BoundaryPolicy.wrap || space.isInstanceOf[Toroidal],
+      "WrapPolicy requires a toroidal space"
+    )
     EnvironmentImpl(space, agents, boundaryPolicy)
 
   private final case class EnvironmentImpl[S](space: Space, agents: List[Agent[S]], boundaryPolicy: BoundaryPolicy)
