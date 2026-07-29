@@ -6,7 +6,7 @@ class ModelTest extends AnyFlatSpec with Matchers with GuiFixtures:
 
   "Model.from" should "create model with tick 0" in { Model.from(config).state.tick shouldBe 0 }
 
-  it should "start paused" in { Model.from(config).running shouldBe false }
+  it should "start" in { Model.from(config).running shouldBe true }
 
   it should "contain the correct agents" in {
     Model.from(config).state.environment.agents should contain theSameElementsAs List(agentA, agentB)
