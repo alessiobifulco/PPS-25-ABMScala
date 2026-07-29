@@ -7,7 +7,7 @@ class SimulationOptionTest extends AnyFlatSpec with Matchers:
   "SimulationOption" should "expose name correctly" in {
     val option = new SimulationOption:
       def name = "Test"
-      def start(): Unit = ()
+      def start(onBack: () => Unit): Unit = ()
     option.name shouldBe "Test"
   }
 
@@ -15,7 +15,7 @@ class SimulationOptionTest extends AnyFlatSpec with Matchers:
     var started = false
     val option = new SimulationOption:
       def name = "Test"
-      def start(): Unit = started = true
-    option.start()
+      def start(onBack: () => Unit): Unit = started = true
+    option.start(() => ())
     started shouldBe true
   }
