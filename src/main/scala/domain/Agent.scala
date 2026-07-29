@@ -21,3 +21,9 @@ object Agent:
     def withState(state: S): Agent[S] = Agent(agent.id, agent.position, agent.velocity, state, agent.memory)
 
 case class AgentContext[S](focus: Agent[S], neighbors: List[Agent[S]], tick: Int)
+
+object AgentContext:
+  extension [S](ctx: AgentContext[S])
+
+    def visibleWithin(radius: Double): List[Agent[S]] = ctx.neighbors
+      .filter(n => (n.position - ctx.focus.position).length <= radius)
