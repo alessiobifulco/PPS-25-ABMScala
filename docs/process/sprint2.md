@@ -26,9 +26,9 @@ La scadenza dello sprint è il 01/08/2026.
 
 | Product Backlog Item          | Sprint Task                                                                         | Volontario | Stima iniziale (h) | Ore rimanenti a fine Sprint 2 |
 |-------------------------------|-------------------------------------------------------------------------------------|------------|--------------------|-------------------------------|
-| **Debito Sprint 1**           | Correzioni a Space: `randomPosition`, `shape`                                       | SF         | 1                  | TBD                           |
-|                               | Correzione a Environment: esposizione di `neighborhoods`                            | SF         | 1                  | TBD                           |
-|                               | Semplificazione di NeighborStrategy e fix di `buildIndex`                           | SF         | 1                  | TBD                           |
+| **Debito Sprint 1**           | Correzioni a Space: `randomPosition`, `shape`                                       | SF         | 1                  | 0                             |
+|                               | Correzione a Environment: esposizione di `neighborhoods`                            | SF         | 1                  | 0                             |
+|                               | Semplificazione di NeighborStrategy e fix di `buildIndex`                           | SF         | 1                  | 0                             |
 | **Interaction Rule**          | InteractionRule (trait, composizione first-match) e test suite                      | AB         | 2                  | TBD                           |
 |                               | `visibleWithin` su AgentContext e test                                              | AB         | 1                  | TBD                           |
 | **Motore di simulazione**     | SimulationState e SimulationConfig                                                  | AB         | 1                  | TBD                           |
@@ -38,26 +38,32 @@ La scadenza dello sprint è il 01/08/2026.
 |                               | Test suite di SimulationBuilder                                                     | AB         | 1                  | TBD                           |
 | **Vocabolario del dominio**   | Costruttori di movimento: `moveRandomly`, `moveHorizontally`                        | AB         | 1                  | TBD                           |
 |                               | Combinatori di regole discrete: `atLeastNear`, `withState`, `whenAgentIs`, `chance` | AB         | 3                  | TBD                           |
-| **Model-View-Update**         | Model, Msg (Tick, ToggleRun, Restart) e funzione `update` pura                      | AB         | 2                  | TBD                           |
-|                               | Test suite di `update`                                                              | AB         | 1                  | TBD                           |
-| **Interfaccia grafica**       | Renderable: type class per la mappatura stato → colore                              | SF         | 1                  | TBD                           |
-|                               | Canvas: rendering di agenti e confini a partire da `Shape`                          | SF         | 3                  | TBD                           |
-|                               | SimulationWindow: timer di frame, dispatch dei messaggi, controlli                  | SF         | 3                  | TBD                           |
-|                               | MainMenu: schermata di scelta della simulazione                                     | SF         | 2                  | TBD                           |
+| **Model-View-Update**         | Model (with `from` factory, integrazione con SimulationEngine)                      | SF         | 1                  | 0                             |
+|                               | Msg enum (Tick, ToggleRun, Restart)                                                 | SF         | 0.5                | 0                             |
+|                               | Mvu: `init` e `update`                                                              | SF         | 1                  | 0                             |
+|                               | Test suite di Model e Mvu                                                           | SF         | 1                  | 0                             |
+| **Interfaccia grafica**       | Renderable: typeclass per la mappatura stato → colore                               | SF         | 1                  | 0                             |
+|                               | SimulationPanel: rendering degli agenti su canvas Swing                             | SF         | 2                  | 0                             |
+|                               | SimulationWindow: timer di frame, bottoni Stop/Resume/Restart/Back                  | SF         | 3                  | 0                             |
+|                               | MainMenu: schermata di scelta con titolo, bottoni, resize e navigazione             | SF         | 2                  | 0                             |
+|                               | SimulationOption: trait per la navigazione menu → simulazione                       | SF         | 0.5                | 0                             |
+|                               | Test suite di Renderable, Msg, Model, Mvu, SimulationOption                         | SF         | 1                  | 0                             |
 | **Simulazione 1: Epidemia**   | Stato `Health`, behaviour e regola di contagio                                      | AB         | 2                  | TBD                           |
-|                               | Istanza di Renderable e integrazione nel menu                                       | SF         | 1                  | TBD                           |
+|                               | Istanza di Renderable e integrazione nel menu                                       | SF         | 1                  | 0                             |
 | **Documentazione del codice** | ScalaDoc su InteractionRule, SimulationEngine, SimulationConfig, Builder            | AB         | 2                  | TBD                           |
 |                               | ScalaDoc su MVU e componenti della view                                             | SF         | 1                  | TBD                           |
 |                               | **Totale**                                                                          |            | **38**             | **TBD**                       |
 
-
 ## Divisione del lavoro
 
 - **AB**: completamento delle astrazioni di dominio (InteractionRule), motore di
-  simulazione, DSL di configurazione, vocabolario dei behaviour e delle regole, nucleo
-  del pattern MVU, simulazioni dimostrative.
-- **SF**: correzioni all'ambiente di simulazione ereditate dallo Sprint 1 e realizzazione
-  dell'interfaccia grafica (rendering, finestra, menu).
+  simulazione, DSL di configurazione, vocabolario dei behaviour e delle regole,
+  simulazioni dimostrative.
+- **SF**: correzioni all'ambiente di simulazione ereditate dallo Sprint 1; realizzazione
+  completa del pattern Model-View-Update (Model, Msg, Mvu) e della relativa test suite;
+  interfaccia grafica Swing (Renderable, SimulationPanel, SimulationWindow, MainMenu,
+  SimulationOption) con navigazione menu → simulazione → menu; integrazione di Renderable per la simulazione
+  Epidemia.
 
 ## Definition of Done
 
