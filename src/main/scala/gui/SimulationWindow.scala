@@ -30,7 +30,8 @@ object SimulationWindow:
       toggleButton.setText(if model.running then "Stop" else "Resume")
 
     def dispatch(msg: Msg): Unit =
-      model = Mvu.update(model, msg)
+      val (newModel, _) = Mvu.update(msg).apply(model)
+      model = newModel
       refreshView()
 
     val timer = new Timer(TimerDelayMs, (_: ActionEvent) => dispatch(Msg.Tick))
