@@ -16,14 +16,17 @@ import javax.swing.WindowConstants
 object SimulationWindow:
   private val TimerDelayMs = 30
 
-  def open[S](title: String, config: SimulationConfig[S], onBack: () => Unit)(using Renderable[S]): Unit =
+  def open[S](title: String, config: SimulationConfig[S], onBack: () => Unit)(using
+      Renderable[S],
+      POIRenderable[S]
+  ): Unit =
     var model = Mvu.init(config)
-    val simulationPanel = new SimulationPanel[S]
     val toggleButton = new JButton("Resume")
     val restartButton = new JButton("Restart")
     val backButton = new JButton("<- Back")
     val controlPanel = new JPanel
     val frame = new JFrame(title)
+    val simulationPanel = new SimulationPanel[S](Nil)
 
     def refreshView(): Unit =
       simulationPanel.render(model)
