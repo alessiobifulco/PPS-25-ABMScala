@@ -1,22 +1,14 @@
 package dsl
 
 import domain.*
+import dsl.ConditionalBehaviour.ActionSource
 
 import scala.annotation.tailrec
 
-object BehaviorDsl:
-  def moveRandomly[S](speed: Double): AgentContext[S] => List[Action[S]] = ctx =>
-    ctx.focus.velocity match
-      case v if v.length > 0 && math.random() > 0.05 => List(Move(v.normalized * speed))
-      case _                                         => List(Move(V2d.random() * speed))
-
-  def moveHorizontally[S](speed: Double): AgentContext[S] => List[Action[S]] = ctx =>
-    ctx.focus.velocity.x match
-      case vx if vx < 0 => List(Move(V2d(-speed, 0)))
-      case _            => List(Move(V2d(speed, 0)))
+object CompositeBehaviour:
 
   private def centroidOffset[S](from: P2d, group: List[Agent[S]]): V2d =
-    if (group.nonEmpty)
+    if group.nonEmpty then
       val centerX: Double = group.map(_.position.x).sum / group.size
       val centerY = group.map(_.position.y).sum / group.size
       P2d(centerX, centerY) - from
@@ -47,7 +39,7 @@ object BehaviorDsl:
       alignmentWeight: Double = 1.0,
       separationWeight: Double = 1.5,
       inertiaWeight: Double = 0.5
-  ): AgentContext[S] => List[Action[S]] = ctx =>
+  ): ActionSource[S] = ctx =>
     val (alike, different) = ctx.neighbors.partition(n => similarTo(n.state, ctx.focus.state))
     val tooClose = ctx.neighbors.filter(n => (n.position - ctx.focus.position).length < separationRadius)
     val repellers = different ++ tooClose
