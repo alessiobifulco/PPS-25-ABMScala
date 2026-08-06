@@ -1,6 +1,6 @@
 package domain
 
-final case class CircularSpace(center: P2d, radius: Double) extends Space:
+final case class CircularSpace(center: P2d, radius: Double) extends Space, Toroidal:
   require(radius > 0, "Radius must be positive")
 
   override def contains(position: P2d): Boolean =
@@ -25,6 +25,13 @@ final case class CircularSpace(center: P2d, radius: Double) extends Space:
         if shouldBounce then V2d(velocity.x - 2 * alongNormal * normal.x, velocity.y - 2 * alongNormal * normal.y)
         else velocity
       (clamp(position), correctedVelocity)
+
+  override def wrap(position: P2d): P2d =
+    val offset = relativeToCenter(position)
+    if offset.length <= radius then position
+    else
+      val n = offset.normalized
+      P2d(center.x - n.x * radius, center.y - n.y * radius)
 
   override def stop(position: P2d, velocity: V2d): (P2d, V2d) =
     val offset = relativeToCenter(position)
