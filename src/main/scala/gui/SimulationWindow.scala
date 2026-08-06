@@ -58,10 +58,13 @@ object SimulationWindow:
     frame.add(controlPanel, BorderLayout.SOUTH)
     frame.pack()
     frame.setLocationByPlatform(true)
-    frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE)
+    frame.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE)
     frame.addWindowListener(
       new WindowAdapter:
-        override def windowClosed(e: WindowEvent): Unit = timer.stop()
+        override def windowClosing(e: WindowEvent): Unit =
+          timer.stop()
+          frame.dispose()
+          onBack()
     )
     frame.setVisible(true)
     refreshView()
