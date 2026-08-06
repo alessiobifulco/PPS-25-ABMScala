@@ -6,6 +6,7 @@ import gui.Renderable
 import dsl.*
 import dsl.BehaviorDsl.*
 import dsl.RulesDSL.*
+import dsl.Simulation.*
 
 import java.awt.Color
 
@@ -16,18 +17,17 @@ object Epidemic:
 
   import Health.*
 
-  private val space = RectangularSpace(800, 600)
   private val speed = 2.0
-  private val perceptionRadius = 15.0
   private val recoveryChance = 0.002
 
-  private val contagion = whenNear(Healthy, Infected, 1, Infected)
-  private val recovery = byChance(Infected, recoveryChance, Healthy)
-
-  val config: SimulationConfig[Health] = SimulationBuilder[Health]().space(space, BoundaryPolicy.bounce)
-    .perception(perceptionRadius).population(200, i => if i == 0 then Infected else Healthy)
-    .choice(Choice(ctx => ctx.focus.state == Infected, moveHorizontally(speed)))
-    .choice(Choice(ctx => true, moveRandomly(speed))).rule(contagion).rule(recovery).build()
+  val config: SimulationConfig[Health] = Simulation.of[Health]:
+    space(RectangularSpace(800, 600), BoundaryPolicy.bounce)
+    perception(15.0)
+    population(200, i => if i == 0 then Infected else Healthy)
+    choice(Choice((ctx: AgentContext[Health]) => ctx.focus.state == Infected, moveHorizontally[Health](speed)))
+    choice(Choice((_: AgentContext[Health]) => true, moveRandomly[Health](speed)))
+    rule(whenNear(Healthy, Infected, 1, Infected))
+    rule(byChance(Infected, recoveryChance, Healthy))
 
   given Renderable[Health] with
     def colorOf(state: Health): Color = state match

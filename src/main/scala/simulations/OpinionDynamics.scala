@@ -3,9 +3,10 @@ package simulations
 import domain.*
 import engine.SimulationConfig
 import gui.Renderable
-import dsl.SimulationBuilder
+import dsl.*
 import dsl.BehaviorDsl.*
 import dsl.RulesDSL.*
+import dsl.Simulation.*
 
 import java.awt.Color
 
@@ -13,10 +14,8 @@ object OpinionDynamics:
 
   case class Opinion(value: Double)
 
-  private val space = RectangularSpace(800, 600)
   private val populationSize = 200
   private val speed = 2.0
-  private val perceptionRadius = 60.0
   private val influenceRadius = 20.0
   private val similarityThreshold = 2.0
   private val convergenceRate = 0.02
@@ -24,12 +23,12 @@ object OpinionDynamics:
 
   private def similar(a: Opinion, b: Opinion): Boolean = math.abs(a.value - b.value) <= similarityThreshold
 
-  private val convergence =
-    convergeTowardsAverage[Opinion](influenceRadius, similar, convergenceRate, _.value, Opinion(_))
-
-  val config: SimulationConfig[Opinion] = SimulationBuilder[Opinion]().space(space, BoundaryPolicy.wrap)
-    .perception(perceptionRadius).population(populationSize, _ => Opinion(math.random() * 10))
-    .choice(Choice(_ => true, flock(speed, separationRadius, similar))).rule(convergence).build()
+  val config: SimulationConfig[Opinion] = Simulation.of[Opinion]:
+    space(RectangularSpace(800, 600), BoundaryPolicy.wrap)
+    perception(60.0)
+    population(populationSize, _ => Opinion(math.random() * 10))
+    choice(Choice((_: AgentContext[Opinion]) => true, flock[Opinion](speed, separationRadius, similar)))
+    rule(convergeTowardsAverage[Opinion](influenceRadius, similar, convergenceRate, _.value, Opinion(_)))
 
   given Renderable[Opinion] with
     def colorOf(state: Opinion): Color =
