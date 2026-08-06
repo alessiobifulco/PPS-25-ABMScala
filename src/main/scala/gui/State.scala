@@ -1,7 +1,5 @@
 package gui
 
-import Monad.*
-
 case class State[S, A](run: S => (S, A))
 
 object State:

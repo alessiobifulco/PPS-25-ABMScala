@@ -30,15 +30,15 @@ class MvuTest extends AnyFlatSpec with Matchers with GuiFixtures:
     newModel.running shouldBe true
   }
 
-  it should "reset tick on Restart" in {
+  it should "reset tick on RestartAndRun" in {
     val model = Mvu.init(config)
     val (afterTick, _) = Mvu.update(Msg.Tick).apply(model)
-    val (restarted, _) = Mvu.update(Msg.Restart).apply(afterTick)
+    val (restarted, _) = Mvu.update(Msg.RestartAndRun).apply(afterTick)
     restarted.state.tick shouldBe 0
   }
 
-  it should "preserve running state on Restart" in {
+  it should "preserve running state on RestartAndRun" in {
     val model = Mvu.init(config)
-    val (restarted, _) = Mvu.update(Msg.Restart).apply(model)
+    val (restarted, _) = Mvu.update(Msg.RestartAndRun).apply(model)
     restarted.running shouldBe true
   }

@@ -1,6 +1,5 @@
 package gui
 
-import domain.Shape
 import engine.SimulationConfig
 import java.awt.BorderLayout
 import java.awt.Dimension
@@ -15,6 +14,8 @@ import javax.swing.WindowConstants
 
 object SimulationWindow:
   private val TimerDelayMs = 30
+  private val PanelWidth = 900
+  private val PanelHeight = 700
 
   def open[S](title: String, config: SimulationConfig[S], onBack: () => Unit)(using Renderable[S]): Unit =
     var model = Mvu.init(config)
@@ -37,7 +38,7 @@ object SimulationWindow:
     val timer = new Timer(TimerDelayMs, (_: ActionEvent) => dispatch(Msg.Tick))
 
     toggleButton.addActionListener(_ => dispatch(Msg.ToggleRun))
-    restartButton.addActionListener(_ => dispatch(Msg.Restart))
+    restartButton.addActionListener(_ => dispatch(Msg.RestartAndRun))
     backButton.addActionListener: _ =>
       timer.stop()
       frame.dispose()
@@ -46,20 +47,19 @@ object SimulationWindow:
     controlPanel.add(toggleButton)
     controlPanel.add(restartButton)
 
-    val dim = config.initialEnvironment.space.shape match
-      case Shape.Rectangle(_, w, h) => new Dimension(w.toInt, h.toInt)
-      case Shape.Circle(_, r)       => new Dimension((r * 2).toInt, (r * 2).toInt)
-
-    simulationPanel.setPreferredSize(dim)
+    simulationPanel.setPreferredSize(new Dimension(PanelWidth, PanelHeight))
     frame.setLayout(new BorderLayout)
     frame.add(simulationPanel, BorderLayout.CENTER)
     frame.add(controlPanel, BorderLayout.SOUTH)
     frame.pack()
     frame.setLocationByPlatform(true)
-    frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE)
+    frame.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE)
     frame.addWindowListener(
       new WindowAdapter:
-        override def windowClosed(e: WindowEvent): Unit = timer.stop()
+        override def windowClosing(e: WindowEvent): Unit =
+          timer.stop()
+          frame.dispose()
+          onBack()
     )
     frame.setVisible(true)
     refreshView()
