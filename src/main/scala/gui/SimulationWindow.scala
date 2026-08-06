@@ -1,8 +1,8 @@
 package gui
 
 import engine.SimulationConfig
-import java.awt.BorderLayout
-import java.awt.Dimension
+
+import java.awt.{BorderLayout, Dimension, GridBagLayout}
 import java.awt.event.ActionEvent
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
@@ -28,6 +28,7 @@ object SimulationWindow:
     val controlPanel = new JPanel
     val frame = new JFrame(title)
     val simulationPanel = new SimulationPanel[S](Nil)
+    val centerPanel = new JPanel(new GridBagLayout)
 
     def refreshView(): Unit =
       simulationPanel.render(model)
@@ -49,10 +50,11 @@ object SimulationWindow:
     controlPanel.add(backButton)
     controlPanel.add(toggleButton)
     controlPanel.add(restartButton)
+    centerPanel.add(simulationPanel)
 
     simulationPanel.setPreferredSize(new Dimension(PanelWidth, PanelHeight))
     frame.setLayout(new BorderLayout)
-    frame.add(simulationPanel, BorderLayout.CENTER)
+    frame.add(centerPanel, BorderLayout.CENTER)
     frame.add(controlPanel, BorderLayout.SOUTH)
     frame.pack()
     frame.setLocationByPlatform(true)
