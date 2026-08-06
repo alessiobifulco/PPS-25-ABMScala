@@ -8,4 +8,4 @@ class MsgTest extends AnyFlatSpec with Matchers:
 
   it should "have ToggleRun case" in { Msg.ToggleRun shouldBe Msg.ToggleRun }
 
-  it should "have Restart case" in { Msg.Restart shouldBe Msg.Restart }
+  it should "have RestartAndRun case" in { Msg.RestartAndRun shouldBe Msg.RestartAndRun }

@@ -1,6 +1,5 @@
 package gui
 
-import domain.Shape
 import engine.SimulationConfig
 import java.awt.BorderLayout
 import java.awt.Dimension
@@ -15,6 +14,8 @@ import javax.swing.WindowConstants
 
 object SimulationWindow:
   private val TimerDelayMs = 30
+  private val PanelWidth = 900
+  private val PanelHeight = 700
 
   def open[S](title: String, config: SimulationConfig[S], onBack: () => Unit)(using
       Renderable[S],
@@ -33,13 +34,14 @@ object SimulationWindow:
       toggleButton.setText(if model.running then "Stop" else "Resume")
 
     def dispatch(msg: Msg): Unit =
-      model = Mvu.update(model, msg)
+      val (newModel, _) = Mvu.update(msg).apply(model)
+      model = newModel
       refreshView()
 
     val timer = new Timer(TimerDelayMs, (_: ActionEvent) => dispatch(Msg.Tick))
 
     toggleButton.addActionListener(_ => dispatch(Msg.ToggleRun))
-    restartButton.addActionListener(_ => dispatch(Msg.Restart))
+    restartButton.addActionListener(_ => dispatch(Msg.RestartAndRun))
     backButton.addActionListener: _ =>
       timer.stop()
       frame.dispose()
@@ -48,11 +50,7 @@ object SimulationWindow:
     controlPanel.add(toggleButton)
     controlPanel.add(restartButton)
 
-    val dim = config.initialEnvironment.space.shape match
-      case Shape.Rectangle(_, w, h) => new Dimension(w.toInt, h.toInt)
-      case Shape.Circle(_, r)       => new Dimension((r * 2).toInt, (r * 2).toInt)
-
-    simulationPanel.setPreferredSize(dim)
+    simulationPanel.setPreferredSize(new Dimension(PanelWidth, PanelHeight))
     frame.setLayout(new BorderLayout)
     frame.add(simulationPanel, BorderLayout.CENTER)
     frame.add(controlPanel, BorderLayout.SOUTH)
