@@ -8,11 +8,11 @@ object ConditionalBehaviour:
 
   def behaviour[S](block: SimulationBuilder[S] ?=> ActionSource[S])(using builder: SimulationBuilder[S]): Unit =
     val default = block(using builder)
-    builder.choice(Choice((_: AgentContext[S]) => true, default))
+    builder.addChoice(Choice((_: AgentContext[S]) => true, default))
 
   extension [S](source: ActionSource[S])
     infix def whenAgentIs(state: S)(using builder: SimulationBuilder[S]): Unit = builder
-      .choice(Choice((ctx: AgentContext[S]) => ctx.focus.state == state, source))
+      .addChoice(Choice((ctx: AgentContext[S]) => ctx.focus.state == state, source))
 
   def moveRandomly[S](speed: Double): ActionSource[S] = ctx =>
     ctx.focus.velocity match

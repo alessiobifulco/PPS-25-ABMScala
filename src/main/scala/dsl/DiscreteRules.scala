@@ -30,7 +30,7 @@ object DiscreteRules:
 
     infix def whenAgentIs(state: S)(using builder: SimulationBuilder[S]): Unit =
       fromState = Some(state)
-      builder.rule(build())
+      builder.addRule(build())
 
     private def build(): InteractionRule[S] = ctx =>
       Option.when(
@@ -39,7 +39,7 @@ object DiscreteRules:
 
   final class ChanceConfig[S](result: S, probability: Double):
     infix def whenAgentIs(state: S)(using builder: SimulationBuilder[S]): Unit = builder
-      .rule(ctx => Option.when(ctx.focus.state == state && math.random() < probability)(result))
+      .addRule(ctx => Option.when(ctx.focus.state == state && math.random() < probability)(result))
 
   extension [S](result: S)(using Discrete[S])
     infix def when(count: NeighbourCount): CountingConfig[S] = CountingConfig(result, count.matches)

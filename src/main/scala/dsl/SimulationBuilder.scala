@@ -1,56 +1,67 @@
 package dsl
 
 import domain.*
-import engine.*
+import engine.SimulationConfig
 
-import scala.annotation.tailrec
+trait SimulationBuilder[S]:
+  def setSpace(space: Space, boundary: BoundaryPolicy): this.type
+  def setPerceptionRadius(radius: Double): this.type
+  def setPopulationSize(size: Int): this.type
+  def setStateGenerator(generator: Int => S): this.type
+  def addChoice(choice: Choice[S]): this.type
+  def addRule(rule: InteractionRule[S]): this.type
+  def build(): SimulationConfig[S]
 
-class SimulationBuilder[S]:
-  private var space: Space = RectangularSpace(800, 600)
-  private var boundary: BoundaryPolicy = BoundaryPolicy.bounce
-  private var perception: Double = 10.0
-  private var population: Int = 0
-  private var states: Option[Int => S] = None
-  private var choices: List[Choice[S]] = Nil
-  private var rules: List[InteractionRule[S]] = Nil
+object SimulationBuilder:
 
-  def space(space: Space, boundary: BoundaryPolicy): this.type =
-    this.space = space
-    this.boundary = boundary
-    this
+  private[dsl] def apply[S](): SimulationBuilder[S] = SimulationBuilderImpl[S]()
 
-  def perception(perception: Double): this.type =
-    this.perception = perception
-    this
+  private class SimulationConfigRecord[S](
+      var space: Space = RectangularSpace(800, 600),
+      var boundaryPolicy: BoundaryPolicy = BoundaryPolicy.bounce,
+      var perceptionRadius: Double = 10.0,
+      var populationSize: Int = 0,
+      var stateAt: Option[Int => S] = None,
+      var choices: List[Choice[S]] = Nil,
+      var rules: List[InteractionRule[S]] = Nil
+  ):
+    def buildConfig(): SimulationConfig[S] =
+      val agents = stateAt.fold(List.empty[Agent[S]])(f =>
+        List.tabulate(populationSize)(i => Agent(AgentId(i), space.randomPosition, V2d.random(), f(i)))
+      )
+      SimulationConfig(
+        Environment(space, agents, boundaryPolicy),
+        Behavior.fromDecision(Decision(choices)),
+        perceptionRadius,
+        InteractionRule.firstOf(rules*)
+      )
 
-  def population(size: Int, generator: Int => S): this.type =
-    this.population = size
-    this.states = Some(generator)
-    this
+  private class SimulationBuilderImpl[S] extends SimulationBuilder[S]:
+    private val record = SimulationConfigRecord[S]()
 
-  def choice(choice: Choice[S]): this.type =
-    this.choices = this.choices :+ choice
-    this
+    override def setSpace(space: Space, boundary: BoundaryPolicy): this.type =
+      record.space = space
+      record.boundaryPolicy = boundary
+      this
 
-  def rule(rule: InteractionRule[S]): this.type =
-    this.rules = this.rules :+ rule
-    this
+    override def setPerceptionRadius(radius: Double): this.type =
+      record.perceptionRadius = radius
+      this
 
-  private def generateAgents(size: Int, generator: Int => S): List[Agent[S]] =
-    @tailrec
-    def _generate(n: Int, acc: List[Agent[S]]): List[Agent[S]] = n match
-      case i if i < 0 => acc
-      case _          => _generate(n - 1, Agent(AgentId(n), space.randomPosition, V2d.random(), generator(n)) :: acc)
-    _generate(size - 1, Nil)
+    override def setPopulationSize(size: Int): this.type =
+      record.populationSize = size
+      this
 
-  def build(): SimulationConfig[S] =
-    val agents = states match
-      case Some(generator) => generateAgents(population, generator)
-      case None            => List.empty[Agent[S]]
+    override def setStateGenerator(generator: Int => S): this.type =
+      record.stateAt = Some(generator)
+      this
 
-    SimulationConfig(
-      Environment(space, agents, boundary),
-      Behavior.fromDecision(Decision(choices)),
-      perception,
-      InteractionRule.firstOf(rules*)
-    )
+    override def addChoice(choice: Choice[S]): this.type =
+      record.choices = record.choices :+ choice
+      this
+
+    override def addRule(rule: InteractionRule[S]): this.type =
+      record.rules = record.rules :+ rule
+      this
+
+    override def build(): SimulationConfig[S] = record.buildConfig()

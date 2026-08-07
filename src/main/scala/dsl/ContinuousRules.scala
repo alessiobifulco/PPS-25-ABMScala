@@ -28,7 +28,7 @@ object ContinuousRules:
 
     infix def atRate(r: Double)(using builder: SimulationBuilder[S]): Unit =
       rate = r
-      builder.rule(build())
+      builder.addRule(build())
 
     private def build(): InteractionRule[S] = ctx =>
       val influencing = ctx.visibleWithin(radius).filter(n => matches(n.state, ctx.focus.state))
