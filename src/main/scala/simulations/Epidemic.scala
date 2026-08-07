@@ -4,9 +4,7 @@ import domain.*
 import engine.SimulationConfig
 import gui.Renderable
 import dsl.*
-import dsl.RulesDSL.*
 import dsl.Simulation.*
-import dsl.ConditionalBehaviour.*
 
 import java.awt.Color
 
@@ -27,8 +25,8 @@ object Epidemic:
     behaviour:
       moveHorizontally[Health](speed) whenAgentIs Infected
       moveRandomly[Health](speed)
-    rule(whenNear(Healthy, Infected, 1, Infected))
-    rule(byChance(Infected, recoveryChance, Healthy))
+    Infected when atLeastNear(1) withState Infected whenAgentIs Healthy
+    Healthy when chance(recoveryChance) whenAgentIs Infected
 
   given Renderable[Health] with
     def colorOf(state: Health): Color = state match

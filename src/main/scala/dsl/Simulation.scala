@@ -4,6 +4,10 @@ import domain.*
 import engine.SimulationConfig
 
 object Simulation:
+  export ConditionalBehaviour.*
+  export CompositeBehaviour.*
+  export DiscreteRules.*
+  export ContinuousRules.*
 
   def of[S](config: SimulationBuilder[S] ?=> Unit): SimulationConfig[S] =
     given builder: SimulationBuilder[S] = SimulationBuilder[S]()

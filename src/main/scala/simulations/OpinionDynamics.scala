@@ -4,17 +4,15 @@ import domain.*
 import engine.SimulationConfig
 import gui.Renderable
 import dsl.*
-import dsl.RulesDSL.*
 import dsl.Simulation.*
-
-import dsl.ConditionalBehaviour.*
-import dsl.CompositeBehaviour.*
 
 import java.awt.Color
 
 object OpinionDynamics:
 
   case class Opinion(value: Double)
+
+  given Continuous[Opinion] = Continuous.instance(_.value, Opinion(_))
 
   private val populationSize = 200
   private val speed = 2.0
@@ -31,7 +29,7 @@ object OpinionDynamics:
     population(populationSize, _ => Opinion(math.random() * 10))
     behaviour:
       flock[Opinion](speed, separationRadius, similar)
-    rule(convergeTowardsAverage[Opinion](influenceRadius, similar, convergenceRate, _.value, Opinion(_)))
+    convergeTowardsAverage[Opinion] within influenceRadius among similar atRate convergenceRate
 
   given Renderable[Opinion] with
     def colorOf(state: Opinion): Color =
