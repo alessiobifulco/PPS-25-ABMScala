@@ -3,33 +3,43 @@ package dsl
 import domain.*
 import dsl.ConditionalBehaviour.ActionSource
 
-import scala.annotation.tailrec
-
 object CompositeBehaviour:
 
-  private def centroidOffset[S](from: P2d, group: List[Agent[S]]): V2d =
-    if group.nonEmpty then
-      val centerX: Double = group.map(_.position.x).sum / group.size
-      val centerY = group.map(_.position.y).sum / group.size
-      P2d(centerX, centerY) - from
-    else V2d.zero
+  private def normalizedOrElse(v: V2d, fallback: => V2d): V2d = if v.length > 0 then v.normalized else fallback
 
-  private def averageHeading[S](group: List[Agent[S]]): V2d =
-    if group.isEmpty then V2d.zero
+  private def alike[S](neighbors: List[Agent[S]], focus: Agent[S], similarTo: (S, S) => Boolean): List[Agent[S]] =
+    neighbors.filter(n => similarTo(n.state, focus.state))
+
+  private def repellersOf[S](
+      neighbors: List[Agent[S]],
+      focus: Agent[S],
+      separationRadius: Double,
+      similarTo: (S, S) => Boolean
+  ): List[Agent[S]] = neighbors
+    .filter(n => !similarTo(n.state, focus.state) || (n.position - focus.position).length < separationRadius)
+
+  private def inertiaForce[S](focus: Agent[S]): V2d = normalizedOrElse(focus.velocity, V2d.random())
+
+  private def cohesionForce[S](focus: Agent[S], alike: List[Agent[S]]): V2d =
+    if alike.isEmpty then V2d.zero
     else
-      val avgX = group.map(_.velocity.x).sum / group.size
-      val avgY = group.map(_.velocity.y).sum / group.size
-      V2d(avgX, avgY)
+      normalizedOrElse(
+        P2d(alike.map(_.position.x).sum / alike.size, alike.map(_.position.y).sum / alike.size) - focus.position,
+        V2d.zero
+      )
 
-  private def separationOffset[S](from: P2d, repellers: List[Agent[S]]): V2d =
-    @tailrec
-    def loop(remaining: List[Agent[S]], acc: V2d): V2d = remaining match
-      case Nil          => acc
-      case head :: tail =>
-        val away = from - head.position
-        val next = if away.length > 0 then acc + (away * (1.0 / away.length)) else acc
-        loop(tail, next)
-    loop(repellers, V2d.zero)
+  private def alignmentForce[S](alike: List[Agent[S]]): V2d =
+    if alike.isEmpty then V2d.zero
+    else
+      normalizedOrElse(
+        V2d(alike.map(_.velocity.x).sum / alike.size, alike.map(_.velocity.y).sum / alike.size),
+        V2d.zero
+      )
+
+  private def separationForce[S](focus: Agent[S], repellers: List[Agent[S]]): V2d = normalizedOrElse(
+    repellers.foldLeft(V2d.zero)((acc, other) => acc + (focus.position - other.position).normalized),
+    V2d.zero
+  )
 
   def flock[S](
       speed: Double,
@@ -40,17 +50,9 @@ object CompositeBehaviour:
       separationWeight: Double = 1.5,
       inertiaWeight: Double = 0.5
   ): ActionSource[S] = ctx =>
-    val (alike, different) = ctx.neighbors.partition(n => similarTo(n.state, ctx.focus.state))
-    val tooClose = ctx.neighbors.filter(n => (n.position - ctx.focus.position).length < separationRadius)
-    val repellers = different ++ tooClose
-    val cohOffset = centroidOffset(ctx.focus.position, alike)
-    val cohesion = if cohOffset.length > 0 then cohOffset.normalized else V2d.zero
-    val heading = averageHeading(alike)
-    val alignment = if heading.length > 0 then heading.normalized else V2d.zero
-    val sepRaw = separationOffset(ctx.focus.position, repellers)
-    val separation = if sepRaw.length > 0 then sepRaw.normalized else V2d.zero
-    val inertia = if ctx.focus.velocity.length > 0 then ctx.focus.velocity.normalized else V2d.random()
-    val direction = (cohesion * cohesionWeight) + (alignment * alignmentWeight) + (separation * separationWeight) +
-      (inertia * inertiaWeight)
-    val finalDirection = if direction.length > 0 then direction.normalized else inertia
-    List(Move(finalDirection * speed))
+    val neighborsAlike = alike(ctx.neighbors, ctx.focus, similarTo)
+    val direction = (cohesionForce(ctx.focus, neighborsAlike) * cohesionWeight) +
+      (alignmentForce(neighborsAlike) * alignmentWeight) +
+      (separationForce(ctx.focus, repellersOf(ctx.neighbors, ctx.focus, separationRadius, similarTo)) *
+        separationWeight) + (inertiaForce(ctx.focus) * inertiaWeight)
+    List(Move(normalizedOrElse(direction, inertiaForce(ctx.focus)) * speed))
