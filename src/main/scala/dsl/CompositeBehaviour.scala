@@ -7,17 +7,6 @@ object CompositeBehaviour:
 
   private def normalizedOrElse(v: V2d, fallback: => V2d): V2d = if v.length > 0 then v.normalized else fallback
 
-  private def alike[S](neighbors: List[Agent[S]], focus: Agent[S], similarTo: (S, S) => Boolean): List[Agent[S]] =
-    neighbors.filter(n => similarTo(n.state, focus.state))
-
-  private def repellersOf[S](
-      neighbors: List[Agent[S]],
-      focus: Agent[S],
-      separationRadius: Double,
-      similarTo: (S, S) => Boolean
-  ): List[Agent[S]] = neighbors
-    .filter(n => !similarTo(n.state, focus.state) || (n.position - focus.position).length < separationRadius)
-
   private def inertiaForce[S](focus: Agent[S]): V2d = normalizedOrElse(focus.velocity, V2d.random())
 
   private def cohesionForce[S](focus: Agent[S], alike: List[Agent[S]]): V2d =
@@ -41,18 +30,52 @@ object CompositeBehaviour:
     V2d.zero
   )
 
-  def flock[S](
-      speed: Double,
-      separationRadius: Double,
-      similarTo: (S, S) => Boolean,
-      cohesionWeight: Double = 1.0,
-      alignmentWeight: Double = 1.0,
-      separationWeight: Double = 1.5,
-      inertiaWeight: Double = 0.5
-  ): ActionSource[S] = ctx =>
-    val neighborsAlike = alike(ctx.neighbors, ctx.focus, similarTo)
-    val direction = (cohesionForce(ctx.focus, neighborsAlike) * cohesionWeight) +
-      (alignmentForce(neighborsAlike) * alignmentWeight) +
-      (separationForce(ctx.focus, repellersOf(ctx.neighbors, ctx.focus, separationRadius, similarTo)) *
-        separationWeight) + (inertiaForce(ctx.focus) * inertiaWeight)
-    List(Move(normalizedOrElse(direction, inertiaForce(ctx.focus)) * speed))
+  final class FlockConfig[S](isFollowed: (S, S) => Boolean) extends ActionSource[S]:
+
+    private var isAvoided: (S, S) => Boolean = (_, _) => false
+    private var speed: Double = 1.0
+    private var separationRadius: Double = 0.0
+    private var cohesionWeight: Double = 1.0
+    private var alignmentWeight: Double = 1.0
+    private var separationWeight: Double = 1.5
+    private var inertiaWeight: Double = 0.5
+
+    infix def avoid(p: (S, S) => Boolean): FlockConfig[S] =
+      isAvoided = p
+      this
+
+    infix def movingAt(s: Double): FlockConfig[S] =
+      speed = s
+      this
+
+    infix def keepingApart(radius: Double): FlockConfig[S] =
+      separationRadius = radius
+      this
+
+    infix def withCohesion(weight: Double): FlockConfig[S] =
+      cohesionWeight = weight
+      this
+
+    infix def withAlignment(weight: Double): FlockConfig[S] =
+      alignmentWeight = weight
+      this
+
+    infix def withSeparation(weight: Double): FlockConfig[S] =
+      separationWeight = weight
+      this
+
+    infix def withInertia(weight: Double): FlockConfig[S] =
+      inertiaWeight = weight
+      this
+
+    override def apply(ctx: AgentContext[S]): List[Action[S]] =
+      val followed = ctx.neighbors.filter(n => isFollowed(n.state, ctx.focus.state))
+      val avoided = ctx.neighbors
+        .filter(n => isAvoided(n.state, ctx.focus.state) || (n.position - ctx.focus.position).length < separationRadius)
+      val inertia = inertiaForce(ctx.focus)
+      val direction = (cohesionForce(ctx.focus, followed) * cohesionWeight) +
+        (alignmentForce(followed) * alignmentWeight) + (separationForce(ctx.focus, avoided) * separationWeight) +
+        (inertia * inertiaWeight)
+      List(Move(normalizedOrElse(direction, inertia) * speed))
+
+  def follow[S](p: (S, S) => Boolean): FlockConfig[S] = FlockConfig[S](p)
