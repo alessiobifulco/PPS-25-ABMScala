@@ -8,6 +8,7 @@ trait SimulationBuilder[S]:
   def setPerceptionRadius(radius: Double): this.type
   def setPopulationSize(size: Int): this.type
   def setStateGenerator(generator: Int => S): this.type
+  def setActionHandler(handler: ActionHandler[S]): this.type
   def addChoice(choice: Choice[S]): this.type
   def addRule(rule: InteractionRule[S]): this.type
   def build(): SimulationConfig[S]
@@ -21,22 +22,27 @@ object SimulationBuilder:
       var boundaryPolicy: BoundaryPolicy = BoundaryPolicy.bounce,
       var perceptionRadius: Double = 10.0,
       var populationSize: Int = 0,
-      var stateAt: Option[Int => S] = None,
-      var choices: List[Choice[S]] = Nil,
-      var rules: List[InteractionRule[S]] = Nil
+      var stateAt: Option[Int => S] = Option.empty[Int => S],
+      var actionHandler: ActionHandler[S] = ActionHandler.default[S],
+      var choices: List[Choice[S]] = List.empty[Choice[S]],
+      var rules: List[InteractionRule[S]] = List.empty[InteractionRule[S]]
   ):
     def buildConfig(): SimulationConfig[S] =
-      val agents = stateAt.fold(List.empty[Agent[S]])(f =>
-        List.tabulate(populationSize)(i => Agent(AgentId(i), space.randomPosition, V2d.random(), f(i)))
-      )
+      assert(stateAt.nonEmpty && populationSize > 0, "Cannot build a simulation without a population!")
+      val generator = stateAt.get
+      val agents = (0 until populationSize).toList
+        .map(i => Agent(AgentId(i), space.randomPosition, V2d.random(), generator(i)))
       SimulationConfig(
         Environment(space, agents, boundaryPolicy),
         Behavior.fromDecision(Decision(choices)),
         perceptionRadius,
-        InteractionRule.firstOf(rules*)
+        InteractionRule.firstOf(rules*),
+        NeighborStrategy.bruteForce[S],
+        actionHandler
       )
 
   private class SimulationBuilderImpl[S] extends SimulationBuilder[S]:
+
     private val record = SimulationConfigRecord[S]()
 
     override def setSpace(space: Space, boundary: BoundaryPolicy): this.type =
@@ -54,6 +60,10 @@ object SimulationBuilder:
 
     override def setStateGenerator(generator: Int => S): this.type =
       record.stateAt = Some(generator)
+      this
+
+    override def setActionHandler(handler: ActionHandler[S]): this.type =
+      record.actionHandler = handler
       this
 
     override def addChoice(choice: Choice[S]): this.type =

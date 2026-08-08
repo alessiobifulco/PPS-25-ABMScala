@@ -8,14 +8,16 @@ object Simulation:
   export CompositeBehaviour.*
   export DiscreteRules.*
   export ContinuousRules.*
+  export ChoicesBuilder.behaviour
+  export RulesBuilder.rules
 
   def of[S](config: SimulationBuilder[S] ?=> Unit): SimulationConfig[S] =
-    given builder: SimulationBuilder[S] = SimulationBuilder[S]()
+    val builder = SimulationBuilder[S]()
     config(using builder)
     builder.build()
 
-  def space[S](space: Space, boundary: BoundaryPolicy)(using builder: SimulationBuilder[S]): Unit = builder
-    .setSpace(space, boundary)
+  def space[S](s: Space, boundary: BoundaryPolicy)(using builder: SimulationBuilder[S]): Unit = builder
+    .setSpace(s, boundary)
 
   def perception[S](radius: Double)(using builder: SimulationBuilder[S]): Unit = builder.setPerceptionRadius(radius)
 
@@ -23,6 +25,9 @@ object Simulation:
     builder.setPopulationSize(size)
     builder.setStateGenerator(generator)
 
-  def choice[S](c: Choice[S])(using builder: SimulationBuilder[S]): Unit = builder.addChoice(c)
+  def handleActionsWith[S](handler: ActionHandler[S])(using builder: SimulationBuilder[S]): Unit = builder
+    .setActionHandler(handler)
 
-  def rule[S](r: InteractionRule[S])(using builder: SimulationBuilder[S]): Unit = builder.addRule(r)
+  def choice[S](c: Choice[S])(using builder: ChoicesBuilder[S]): Unit = builder.addChoice(c)
+
+  def rule[S](r: InteractionRule[S])(using builder: RulesBuilder[S]): Unit = builder.addRule(r)
