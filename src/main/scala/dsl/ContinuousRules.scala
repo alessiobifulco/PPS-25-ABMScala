@@ -4,16 +4,12 @@ import domain.*
 
 trait Continuous[S]:
   def extract(state: S): Double
-  def rebuild(value: Double): S
-
-object Continuous:
-  def instance[S](extractor: S => Double, builder: Double => S): Continuous[S] = new Continuous[S]:
-    def extract(state: S): Double = extractor(state)
-    def rebuild(value: Double): S = builder(value)
+  def update(state: S, value: Double): S
 
 object ContinuousRules:
 
-  final class ConvergeConfig[S](using continuous: Continuous[S]):
+  final class ConvergeConfig[S](continuous: Continuous[S]) extends RuleBuilder[S]:
+
     private var radius: Double = Double.PositiveInfinity
     private var matches: (S, S) => Boolean = (_, _) => true
     private var rate: Double = 1.0
@@ -26,16 +22,19 @@ object ContinuousRules:
       matches = p
       this
 
-    infix def atRate(r: Double)(using builder: SimulationBuilder[S]): Unit =
+    infix def atRate(r: Double): ConvergeConfig[S] =
       rate = r
-      builder.addRule(build())
+      this
 
-    private def build(): InteractionRule[S] = ctx =>
+    override def build(): InteractionRule[S] = ctx =>
       val influencing = ctx.visibleWithin(radius).filter(n => matches(n.state, ctx.focus.state))
-      if influencing.isEmpty then None
+      if influencing.isEmpty then Option.empty
       else
         val own = continuous.extract(ctx.focus.state)
         val target = influencing.map(n => continuous.extract(n.state)).sum / influencing.size
-        Some(continuous.rebuild(own + (target - own) * rate))
+        Some(continuous.update(ctx.focus.state, own + (target - own) * rate))
 
-  def convergeTowardsAverage[S](using continuous: Continuous[S]): ConvergeConfig[S] = ConvergeConfig[S]
+  def convergeTowardsAverage[S: Continuous](using r: RulesBuilder[S]): ConvergeConfig[S] =
+    val config = ConvergeConfig[S](summon[Continuous[S]])
+    r.addRuleBuilder(config)
+    config
