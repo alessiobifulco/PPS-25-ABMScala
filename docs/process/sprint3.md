@@ -11,49 +11,52 @@ parent: Processo di Sviluppo
 
 L'obiettivo di questo Sprint è duplice e punta a migliorare radicalmente l'ergonomia e la purezza architetturale del framework.
 In primo luogo, verrà sviluppato un DSL (Domain Specific Language) dichiarativo sfruttando le feature di Scala 3 (come le *context functions*), per consentire una configurazione fluida ed espressiva delle simulazioni, andando a sostituire la configurazione manuale di `SimulationConfig`.
-In secondo luogo, il livello della View verrà refattorizzato applicando pattern funzionali puri: gli effetti collaterali legati all'interfaccia grafica (Swing) verranno isolati all'interno di un wrapper monadico (es. `IO` / `Task`), garantendo maggiore testabilità e separazione netta tra la logica di aggiornamento e il rendering effettivo. Infine, verranno introdotti i Point of Interest (POI) come nuovo elemento configurabile dell'ambiente di simulazione.
+In secondo luogo, il livello della View verrà refattorizzato applicando pattern funzionali puri: la logica di aggiornamento del modello verrà espressa tramite la **State monad**, separando la descrizione delle transizioni di stato dalla loro esecuzione. Infine, verranno introdotti i Point of Interest (POI) come nuovo elemento configurabile dell'ambiente di simulazione.
 
 ## Deadline
 
 La scadenza dello sprint è il 15/08/2026.
 
 ## Backlog
-
-| Product Backlog Item        | Sprint Task                                                                                      | Volontario | Stima iniziale (h) | Ore rimanenti a fine Sprint 3 |
-|-----------------------------|--------------------------------------------------------------------------------------------------|------------|--------------------|-------------------------------|
-| **DSL Core**                | Astrazione base del DSL (`SimulationBuilder` e context functions)                                | AB         | 4                  | 0                             |
-|                             | DSL per la definizione di `Environment`, `Space` e `BoundaryPolicy`                              | AB         | 2                  | 0                             |
-|                             | DSL per la definizione di Popolazione, Agenti e Stato Iniziale                                   | AB         | 3                  | 0                             |
-|                             | DSL per la composizione di `Behaviour` e `InteractionRule`                                       | AB         | 3                  | 0                             |
-| **Popolazione dinamica**    | Azioni `Spawn` e `Die` e interpretazione estendibile tramite `ActionHandler`                     | AB         | 2                  | 0                             |
-|                             | Adattamento di `SimulationEngine` a una popolazione di dimensione variabile                      | AB         | 2                  | 0                             |
-|                             | Costruttori del DSL per nascita e morte (`spawn`, `die`, `stopMoving`, `vanishingWith`)          | AB         | 0.5                | 0                             |
-|                             | Stato `Dead` e decadimento dei cadaveri in *Epidemia*                                            | AB         | 0.5                | 0                             |
-| **Refactoring del dominio** | Revisione di `InteractionRule`, `Decision`, `Behavior` ed estrazione di `AgentContext`           | AB         | 1                  | 0                             |
-| **Functional View**         | Setup della Monade `IO` (o `Task`) per la gestione degli effetti collaterali                     | SF         | 4                  | 4                             |
-|                             | Refactoring di `SimulationPanel` e `SimulationWindow` in ottica monadica                         | SF         | 5                  | 5                             |
-|                             | Integrazione del loop di MVU con la nuova gestione pura del rendering                            | SF         | 3                  | 3                             |
-| **Point of Interest**       | Definizione di `POI` (posizione, raggio, ritardo di attivazione) e integrazione in `Environment` | SF         | 4                  | 4                             |
-| **Migrazione**              | Migrazione di *Epidemia* sul nuovo DSL                                                           | AB         | 0.5                | 0                             |
-|                             | Migrazione di *Epidemia* sulla nuova View                                                        | SF         | 0.5                | 0.5                           |
-|                             | Migrazione di *Opinion Dynamics* sul nuovo DSL                                                   | AB         | 0.5                | 0                             |
-|                             | Migrazione di *Opinion Dynamics* sulla nuova View                                                | SF         | 0.5                | 0.5                           |
-| **Documentazione**          | ScalaDoc sulle feature del DSL (builder, syntax, impliciti)                                      | AB         | 2                  | 0                             |
-|                             | ScalaDoc sull'architettura monadica della View e gestione side-effects                           | SF         | 2                  | 0                             |
-|                             | **Totale**                                                                                       |            | **40**             | **17**                        |
+| Product Backlog Item        | Sprint Task                                                                                       | Volontario | Stima iniziale (h) | Ore rimanenti a fine Sprint 3 |
+|-----------------------------|---------------------------------------------------------------------------------------------------|------------|--------------------|-------------------------------|
+| **DSL Core**                | Astrazione base del DSL (`SimulationBuilder` e context functions)                                 | AB         | 4                  | 0                             |
+|                             | DSL per la definizione di `Environment`, `Space` e `BoundaryPolicy`                               | AB         | 2                  | 0                             |
+|                             | DSL per la definizione di Popolazione, Agenti e Stato Iniziale                                    | AB         | 3                  | 0                             |
+|                             | DSL per la composizione di `Behaviour` e `InteractionRule`                                        | AB         | 3                  | 0                             |
+| **Popolazione dinamica**    | Azioni `Spawn` e `Die` e interpretazione estendibile tramite `ActionHandler`                      | AB         | 2                  | 0                             |
+|                             | Adattamento di `SimulationEngine` a una popolazione di dimensione variabile                       | AB         | 2                  | 0                             |
+|                             | Costruttori del DSL per nascita e morte (`spawn`, `die`, `stopMoving`, `vanishingWith`)           | AB         | 0.5                | 0                             |
+|                             | Stato `Dead` e decadimento dei cadaveri in *Epidemia*                                             | AB         | 0.5                | 0                             |
+| **Refactoring del dominio** | Revisione di `InteractionRule`, `Decision`, `Behavior` ed estrazione di `AgentContext`            | AB         | 1                  | 0                             |
+| **Functional View**         | Definizione della typeclass `Monad[F[_]]` e implementazione della `State` monad                   | SF         | 3                  | 0                             |
+|                             | Refactoring di `Mvu.update` come `State[Model[S], Unit]`                                          | SF         | 2                  | 0                             |
+|                             | Aggiornamento di `SimulationWindow.dispatch` per esecuzione della State monad                     | SF         | 2                  | 0                             |
+|                             | Test suite per `Monad`, `State` e `Mvu` refactorizzato                                            | SF         | 2                  | 0                             |
+| **Point of Interest**       | Definizione di `POI`, `POIEffect`, `Residency` nel package `domain`                               | SF         | 3                  | 0                             |
+|                             | Definizione di `POIRenderable` con `given` di default per simulazioni senza POI                   | SF         | 2                  | 0                             |
+|                             | Rendering dei POI e dei confini dell'environment in `SimulationPanel`                             | SF         | 3                  | 0                             |
+|                             | Implementazione del wrap toroidale su `CircularSpace`                                             | SF         | 1                  | 0                             |
+| **Migrazione**              | Migrazione di *Epidemia* sul nuovo DSL                                                            | AB         | 0.5                | 0                             |
+|                             | Migrazione di *Epidemia* sulla nuova View                                                         | SF         | 0.5                | 0                             |
+|                             | Migrazione di *Opinion Dynamics* sul nuovo DSL                                                    | AB         | 0.5                | 0                             |
+|                             | Migrazione di *Opinion Dynamics* sulla nuova View                                                 | SF         | 0.5                | 0                             |
+| **Documentazione**          | ScalaDoc sulle feature del DSL (builder, syntax, impliciti)                                       | AB         | 2                  | 0                             |
+|                             | ScalaDoc sulla State monad, POI e componenti della View                                           | SF         | 2                  | 0                             |
+|                             | **Totale**                                                                                        |            | **40**             | **0**                         |
 
 ## Divisione del lavoro
 
-- **AB**: Responsabile interamente della progettazione e realizzazione del DSL. Si occuperà di sfruttare i costrutti di Scala 3 per creare un vocabolario dichiarativo che copra tutto lo spettro della configurazione (Ambiente, Agenti, Comportamenti, Regole).
-- **SF**: Responsabile del refactoring funzionale della View. Si occuperà di isolare gli effetti collaterali di Swing tramite l'introduzione di una Monade dedicata, riorganizzando il ciclo di update di MVU per restituire descrizioni di computazioni (`IO`) anziché eseguire effetti diretti. Si occuperà inoltre della progettazione e integrazione dei Point of Interest nell'ambiente di simulazione, e infine della migrazione delle simulazioni esistenti sulla nuova architettura.
+- **AB**: Responsabile interamente della progettazione e realizzazione del DSL. Si è occupato di sfruttare i costrutti di Scala 3 per creare un vocabolario dichiarativo che copre tutto lo spettro della configurazione (Ambiente, Agenti, Comportamenti, Regole). Ha introdotto le azioni `Spawn` e `Die` per la popolazione dinamica e migrato entrambe le simulazioni sul nuovo DSL.
+- **SF**: Responsabile del refactoring funzionale della View tramite la State monad e dell'introduzione dei Point of Interest. Si è occupato di introdurre la typeclass `Monad[F[_]]` e la `State` monad nel package `gui`, refattorizzando il ciclo MVU per separare descrizione ed esecuzione delle transizioni di stato. Ha progettato e integrato i Point of Interest nell'ambiente di simulazione, curandone il rendering nell'interfaccia grafica e implementando il wrap toroidale su `CircularSpace`. Ha infine migrato le simulazioni esistenti sulla nuova architettura della View.
 
 ## Definition of Done
 
 - Il DSL permette di configurare un'intera simulazione in modo dichiarativo e compila senza errori.
-- La logica di rendering della View non esegue effetti diretti ma restituisce tipi monadici puri.
-- I Point of Interest sono configurabili e integrati nell'ambiente di simulazione.
+- La logica di transizione del modello è espressa tramite la State monad, separando descrizione ed esecuzione.
+- I Point of Interest sono definiti nel dominio e renderizzati nell'interfaccia grafica.
 - Le simulazioni precedenti (Epidemia, Opinion Dynamics) funzionano perfettamente con il nuovo DSL e la nuova architettura della View.
-- ScalaDoc è presente su tutte le nuove astrazioni (Builder del DSL, POI e classi della View monadica).
+- ScalaDoc è presente su tutte le nuove astrazioni (Builder del DSL, POI e State monad).
 - PR di ogni branch feature verso `develop` con test verdi in CI.
 
 ## Sprint Review
@@ -85,17 +88,18 @@ condotta una revisione del modello di dominio, con l'estrazione di `AgentContext
 propria. Questo lavoro è stato assorbito dal margine che il team riserva in fase di planning e
 non ha generato debito.
 
-Entrambe le simulazioni dimostrative sono state migrate sul nuovo DSL e restano avviabili e
-osservabili a schermo. La parte di migrazione relativa alla nuova View resta aperta, in attesa
-del refactoring monadico.
+Lato View, è stata introdotta la **State monad** per il ciclo MVU, separando la descrizione
+delle transizioni di stato dalla loro esecuzione. Sono stati introdotti i Point of Interest
+come nuovo elemento configurabile dell'ambiente, con supporto al rendering nell'interfaccia
+grafica. Il comportamento ai confini dello spazio circolare è stato esteso con il wrap
+toroidale. Entrambe le simulazioni sono state migrate sulla nuova architettura della View.
 
 ## Sprint Retrospective
 
-Le ore rimanenti a fine sprint sono a zero su tutti i task assegnati ad AB, comprese le voci
-emerse in corso d'opera. Il blocco DSL Core ha richiesto più iterazioni del previsto, perché la
-sintassi infissa è stata riscritta più volte prima di risultare leggibile e l'interazione fra
-catene infisse e costruzione dei builder ha imposto una revisione dell'architettura a metà sprint;
-il margine riservato in planning è stato sufficiente ad assorbirla.
+Le ore rimanenti a fine sprint sono a zero su tutti i task. Il blocco DSL Core ha richiesto più
+iterazioni del previsto, perché la sintassi infissa è stata riscritta più volte prima di risultare
+leggibile e l'interazione fra catene infisse e costruzione dei builder ha imposto una revisione
+dell'architettura a metà sprint; il margine riservato in planning è stato sufficiente ad assorbirla.
 
 ### Cosa è andato bene
 
@@ -105,7 +109,10 @@ il margine riservato in planning è stato sufficiente ad assorbirla.
 - Il vocabolario del DSL è rimasto aperto all'estensione: un comportamento è un semplice alias di
   funzione e una regola un `RuleBuilder`, quindi una simulazione esterna può definirne di propri
   senza modificare il package `dsl`.
-- Il margine tenuto a backlog fin dallo Sprint 2 ha coperto per intero il lavoro di refactoring, che a specifica non era previsto.
+- La State monad ha permesso di separare nettamente la logica di transizione del modello dalla
+  sua esecuzione, rendendo `Mvu` completamente puro e testabile senza aprire finestre.
+- Il margine tenuto a backlog fin dallo Sprint 2 ha coperto per intero il lavoro di refactoring,
+  che a specifica non era previsto.
 
 ### Cosa può essere migliorato
 
@@ -120,7 +127,6 @@ il margine riservato in planning è stato sufficiente ad assorbirla.
   che il motore non interpreta.
 
 ### Action items per il prossimo sprint
-
 
 - Estendere la parte di DSL relativa a spazio e popolazione alla stessa forma infissa del resto del
   vocabolario, sostituendo gli argomenti posizionali e il generatore per indice con costrutti del
