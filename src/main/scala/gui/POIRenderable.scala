@@ -3,9 +3,9 @@ package gui
 import domain.POI
 import java.awt.Color
 
-trait POIRenderable[S]:
-  def colorOf(poi: POI[S]): Color
+trait POIRenderable:
+  def colorOf(poi: POI): Color
 
 object POIRenderable:
-  given default[S]: POIRenderable[S] with
-    def colorOf(poi: POI[S]): Color = Color.GRAY
+  given default: POIRenderable with
+    def colorOf(poi: POI): Color = Color.GRAY
