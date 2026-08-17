@@ -5,7 +5,7 @@ import java.awt.Color
 import java.awt.Graphics
 import javax.swing.JPanel
 
-final class SimulationPanel[S](pois: List[POI[S]])(using renderable: Renderable[S], poiRenderable: POIRenderable[S])
+final class SimulationPanel[S](pois: List[POI])(using renderable: Renderable[S], poiRenderable: POIRenderable)
     extends JPanel:
 
   private var currentModel: Option[Model[S]] = None
