@@ -71,10 +71,12 @@ class CircularSpaceTest extends AnyFlatSpec with Matchers:
     val velocity = V2d(-2.0, 1.0)
     space.stop(position, velocity) shouldBe (position, velocity)
 
-  it should "fallback to bounce for circular spaces when using WrapPolicy" in:
+  it should "wrap a position outside the circle to the opposite side" in:
     val position = P2d(10.0, 0.0)
     val velocity = V2d(2.0, 1.0)
-    BoundaryPolicy.wrap(position, velocity, space) shouldBe space.bounce(position, velocity)
+    val (newPos, newVel) = BoundaryPolicy.wrap(position, velocity, space)
+    newVel shouldBe velocity
+    space.contains(newPos) shouldBe true
 
   it should "generate a random position within the circle" in:
     val pos = space.randomPosition

@@ -47,10 +47,7 @@ class EnvironmentTest extends AnyFlatSpec with Matchers:
     neighbors should contain(agent2)
     neighbors should not contain distantAgent
 
-  it should "reject WrapPolicy if the space is not toroidal" in:
-    val nonToroidalSpace = CircularSpace(center = P2d(0.0, 0.0), radius = 10.0)
-
-    val exception = the[IllegalArgumentException] thrownBy:
-      Environment(space = nonToroidalSpace, agents = List.empty, boundaryPolicy = BoundaryPolicy.wrap)
-
-    exception.getMessage should include("WrapPolicy requires a toroidal space")
+  it should "accept WrapPolicy for circular toroidal space" in:
+    val circularSpace = CircularSpace(center = P2d(0.0, 0.0), radius = 10.0)
+    noException should be thrownBy:
+      Environment(space = circularSpace, agents = List.empty, boundaryPolicy = BoundaryPolicy.wrap)
