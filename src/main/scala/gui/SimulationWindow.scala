@@ -19,7 +19,7 @@ object SimulationWindow:
 
   def open[S](title: String, config: SimulationConfig[S], onBack: () => Unit)(using
       Renderable[S],
-      POIRenderable[S]
+      POIRenderable
   ): Unit =
     var model = Mvu.init(config)
     val toggleButton = new JButton("Resume")

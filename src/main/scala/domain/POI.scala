@@ -1,24 +1,26 @@
 package domain
 
-trait POIEffect[S]:
-  def apply(agent: Agent[S]): Agent[S]
+opaque type PoiId = Int
 
-object POIEffect:
-  def apply[S](f: Agent[S] => Agent[S]): POIEffect[S] = f(_)
-  def transformState[S](f: S => S): POIEffect[S] = agent => agent.withState(f(agent.state))
-  def noop[S]: POIEffect[S] = agent => agent
+object PoiId:
 
-case class POI[S](id: Int, position: P2d, radius: Double, activationDelay: Int, effect: POIEffect[S]):
-  def affects(agent: Agent[S]): Boolean = (agent.position - position).length <= radius
+  def apply(value: Int): PoiId = value
 
-object POI:
-  def at[S](id: Int, position: P2d, radius: Double, activationDelay: Int = 0)(effect: S => S): POI[S] =
-    POI(id, position, radius, activationDelay, POIEffect.transformState(effect))
+  extension (id: PoiId) def value: Int = id
 
-case class Residency(perPoi: Map[Int, Int]):
-  def tickFor(poiId: Int): Residency = copy(perPoi = perPoi.updatedWith(poiId)(t => Some(t.getOrElse(0) + 1)))
-  def reset(poiId: Int): Residency = copy(perPoi = perPoi - poiId)
-  def ticksIn(poiId: Int): Int = perPoi.getOrElse(poiId, 0)
+case class POI(id: PoiId, position: P2d, radius: Double, activationDelay: Int = 0):
+  require(radius > 0, "Radius must be positive")
+  require(activationDelay >= 0, "Activation delay cannot be negative")
+
+  def contains(p: P2d): Boolean = (p - position).length <= radius
+
+case class Residency(perPoi: Map[PoiId, Int]):
+
+  def tickFor(poi: PoiId): Residency = copy(perPoi = perPoi.updatedWith(poi)(t => Some(t.getOrElse(0) + 1)))
+
+  def reset(poi: PoiId): Residency = copy(perPoi = perPoi - poi)
+
+  def ticksIn(poi: PoiId): Int = perPoi.getOrElse(poi, 0)
 
 object Residency:
   val empty: Residency = Residency(Map.empty)
