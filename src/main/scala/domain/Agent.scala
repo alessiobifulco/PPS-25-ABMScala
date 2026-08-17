@@ -8,22 +8,21 @@ trait Agent[S]:
   def memory: Option[Memory[S]]
 
 object Agent:
-  def apply[S](id: AgentId, position: P2d, velocity: V2d, state: S, memory: Option[Memory[S]] = None): Agent[S] =
-    AgentImpl(id, position, velocity, state, memory)
+
+  def apply[S](
+      id: AgentId,
+      position: P2d,
+      velocity: V2d,
+      state: S,
+      memory: Option[Memory[S]] = Option.empty[Memory[S]]
+  ): Agent[S] = AgentImpl(id, position, velocity, state, memory)
 
   private case class AgentImpl[S](id: AgentId, position: P2d, velocity: V2d, state: S, memory: Option[Memory[S]])
       extends Agent[S]
 
   extension [S](agent: Agent[S])
+
     def withMotion(position: P2d, velocity: V2d): Agent[S] =
       Agent(agent.id, position, velocity, agent.state, agent.memory)
 
     def withState(state: S): Agent[S] = Agent(agent.id, agent.position, agent.velocity, state, agent.memory)
-
-case class AgentContext[S](focus: Agent[S], neighbors: List[Agent[S]], tick: Int)
-
-object AgentContext:
-  extension [S](ctx: AgentContext[S])
-
-    def visibleWithin(radius: Double): List[Agent[S]] = ctx.neighbors
-      .filter(n => (n.position - ctx.focus.position).length <= radius)
