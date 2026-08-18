@@ -7,7 +7,7 @@ object CompositeBehaviour:
 
   private def normalizedOrElse(v: V2d, fallback: => V2d): V2d = if v.length > 0 then v.normalized else fallback
 
-  private def inertiaForce[S](focus: Agent[S]): V2d = normalizedOrElse(focus.velocity, V2d.random())
+  private def headingForce[S](focus: Agent[S]): V2d = normalizedOrElse(focus.velocity, V2d.random())
 
   private def cohesionForce[S](focus: Agent[S], alike: List[Agent[S]]): V2d =
     if alike.isEmpty then V2d.zero
@@ -38,7 +38,7 @@ object CompositeBehaviour:
     private var cohesionWeight: Double = 1.0
     private var alignmentWeight: Double = 1.0
     private var separationWeight: Double = 1.5
-    private var inertiaWeight: Double = 0.5
+    private var headingWeight: Double = 0.5
 
     infix def avoid(p: (S, S) => Boolean): FlockConfig[S] =
       isAvoided = p
@@ -64,18 +64,18 @@ object CompositeBehaviour:
       separationWeight = weight
       this
 
-    infix def withInertia(weight: Double): FlockConfig[S] =
-      inertiaWeight = weight
+    infix def withHeading(weight: Double): FlockConfig[S] =
+      headingWeight = weight
       this
 
     override def apply(ctx: AgentContext[S]): List[Action[S]] =
       val followed = ctx.neighbors.filter(n => isFollowed(n.state, ctx.focus.state))
       val avoided = ctx.neighbors
         .filter(n => isAvoided(n.state, ctx.focus.state) || (n.position - ctx.focus.position).length < separationRadius)
-      val inertia = inertiaForce(ctx.focus)
+      val heading = headingForce(ctx.focus)
       val direction = (cohesionForce(ctx.focus, followed) * cohesionWeight) +
         (alignmentForce(followed) * alignmentWeight) + (separationForce(ctx.focus, avoided) * separationWeight) +
-        (inertia * inertiaWeight)
-      List(Move(normalizedOrElse(direction, inertia) * speed))
+        (heading * headingWeight)
+      List(Move(normalizedOrElse(direction, heading) * speed))
 
   def follow[S](p: (S, S) => Boolean): FlockConfig[S] = FlockConfig[S](p)
