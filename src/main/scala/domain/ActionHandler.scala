@@ -1,9 +1,9 @@
 package domain
 
-case class ActionContext[S](focus: Agent[S], space: Space, freshId: AgentId)
+case class ActionContext[S](sender: Agent[S], space: Space, freshId: AgentId, tick: Int)
 
 trait ActionHandler[S]:
-  def apply(action: Action[S], agents: List[Agent[S]], ctx: ActionContext[S]): List[Agent[S]]
+  def apply(action: Action[S], recipient: Agent[S], ctx: ActionContext[S]): List[Agent[S]]
 
 object ActionHandler:
 
@@ -11,7 +11,12 @@ object ActionHandler:
 
   private case class DefaultHandler[S]() extends ActionHandler[S]:
 
-    override def apply(action: Action[S], agents: List[Agent[S]], ctx: ActionContext[S]): List[Agent[S]] = action match
-      case Die()        => agents.filter(_.id != ctx.focus.id)
-      case Spawn(state) => agents :+ Agent(ctx.freshId, ctx.space.randomPosition, V2d.random(), state)
-      case _            => agents
+    override def apply(action: Action[S], recipient: Agent[S], ctx: ActionContext[S]): List[Agent[S]] = action match
+      case Die()                 => List.empty
+      case Spawn(state)          => List(recipient, Agent(ctx.freshId, ctx.space.randomPosition, V2d.random(), state))
+      case Remember(event)       => List(recording(recipient, ctx.tick, event))
+      case ShareMemory(_, event) => List(recording(recipient, ctx.tick, event))
+      case _                     => List(recipient)
+
+    private def recording(agent: Agent[S], tick: Int, event: MemoryEvent): Agent[S] = agent
+      .withMemory(agent.memory.map(_.remember(tick, event)))
