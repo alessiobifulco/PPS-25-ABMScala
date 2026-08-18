@@ -8,3 +8,5 @@ object AgentContext:
 
     def visibleWithin(radius: Double): List[Agent[S]] = ctx.neighbors
       .filter(n => (n.position - ctx.focus.position).length <= radius)
+
+    def heardBeliefs: List[Belief] = ctx.neighbors.flatMap(_.remembers)

@@ -5,7 +5,7 @@ trait Agent[S]:
   def position: P2d
   def velocity: V2d
   def state: S
-  def memory: Option[Memory[S]]
+  def memory: Option[Memory]
 
 object Agent:
 
@@ -14,10 +14,10 @@ object Agent:
       position: P2d,
       velocity: V2d,
       state: S,
-      memory: Option[Memory[S]] = Option.empty[Memory[S]]
+      memory: Option[Memory] = Option.empty[Memory]
   ): Agent[S] = AgentImpl(id, position, velocity, state, memory)
 
-  private case class AgentImpl[S](id: AgentId, position: P2d, velocity: V2d, state: S, memory: Option[Memory[S]])
+  private case class AgentImpl[S](id: AgentId, position: P2d, velocity: V2d, state: S, memory: Option[Memory])
       extends Agent[S]
 
   extension [S](agent: Agent[S])
@@ -26,3 +26,10 @@ object Agent:
       Agent(agent.id, position, velocity, agent.state, agent.memory)
 
     def withState(state: S): Agent[S] = Agent(agent.id, agent.position, agent.velocity, state, agent.memory)
+
+    def withMemory(memory: Option[Memory]): Agent[S] =
+      Agent(agent.id, agent.position, agent.velocity, agent.state, memory)
+
+    def remembers: List[Belief] = agent.memory match
+      case Some(m) => m.beliefs
+      case _       => List.empty
