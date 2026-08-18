@@ -4,41 +4,57 @@ import domain.*
 
 object SimulationEngine:
 
+  private case class Intent[S](agent: Agent[S], actions: List[Action[S]])
+
+  private case class Population[S](agents: List[Agent[S]], nextId: Int):
+
+    def newId: AgentId = AgentId(nextId)
+
+    def updating(target: AgentId)(successorsOf: Agent[S] => List[Agent[S]]): Population[S] =
+      val updated = agents.flatMap:
+        case agent if agent.id == target => successorsOf(agent)
+        case agent                       => List(agent)
+      Population(updated, nextAvailableId(updated).max(nextId))
+
   def init[S](config: SimulationConfig[S]): SimulationState[S] =
-    val agents = config.initialEnvironment.agents
-    SimulationState(config.initialEnvironment, 0, agents.foldLeft(0)((next, agent) => next.max(agent.id.value + 1)))
+    SimulationState(config.initialEnvironment, 0, nextAvailableId(config.initialEnvironment.agents))
 
   def tick[S](state: SimulationState[S], config: SimulationConfig[S]): SimulationState[S] =
-    val environment = state.environment
-    val (agents, nextId) = perceive(state, config).foldLeft((List.empty[Agent[S]], state.nextId)):
-      case ((accumulated, freshId), ctx) =>
-        val (successors, updatedId) = step(environment, config, freshId)(ctx)
-        (accumulated ++ successors, updatedId)
-    SimulationState(environment.withAgents(agents), state.tick + 1, nextId)
+    val intents = perceive(state, config).map(decide(state.environment, config))
+    val population = deliver(intents, state, config)
+    SimulationState(state.environment.withAgents(population.agents), state.tick + 1, population.nextId)
 
-  private def step[S](environment: Environment[S], config: SimulationConfig[S], freshId: Int)(
-      ctx: AgentContext[S]
-  ): (List[Agent[S]], Int) =
-    val actions = config.behavior(ctx)
-    val moved = move(environment, actions)(ctx)
-    val updated = config.rule(ctx) match
-      case Some(state) => moved.withState(state)
-      case _           => moved
-    interpret(actions, updated, environment.space, freshId)(using config.actionHandler)
-
-  private def interpret[S](actions: List[Action[S]], agent: Agent[S], space: Space, freshId: Int)(using
-      handler: ActionHandler[S]
-  ): (List[Agent[S]], Int) = actions.foldLeft((List(agent), freshId)):
-    case ((agents, id), action) =>
-      val successors = handler(action, agents, ActionContext(agent, space, AgentId(id)))
-      (successors, id + successors.count(_.id.value >= id))
+  private def nextAvailableId[S](agents: List[Agent[S]]): Int = agents
+    .foldLeft(0)((next, agent) => next.max(agent.id.value + 1))
 
   private def perceive[S](state: SimulationState[S], config: SimulationConfig[S]): List[AgentContext[S]] =
     val findNeighbors = state.environment.neighborhoods(config.perceptionRadius)(using config.neighborStrategy)
     state.environment.agents.map(agent => AgentContext(agent, findNeighbors(agent), state.tick))
 
-  private def move[S](environment: Environment[S], actions: List[Action[S]])(ctx: AgentContext[S]): Agent[S] =
-    val agent = ctx.focus
+  private def decide[S](environment: Environment[S], config: SimulationConfig[S])(ctx: AgentContext[S]): Intent[S] =
+    val actions = config.behavior(ctx)
+    val moved = move(ctx.focus, actions, environment)
+    config.rule(ctx) match
+      case Some(state) => Intent(moved.withState(state), actions)
+      case _           => Intent(moved, actions)
+
+  private def deliver[S](
+      intents: List[Intent[S]],
+      state: SimulationState[S],
+      config: SimulationConfig[S]
+  ): Population[S] =
+    val decided = Population(intents.map(_.agent), state.nextId)
+    intents.foldLeft(decided): (population, intent) =>
+      intent.actions.foldLeft(population): (current, action) =>
+        route(action, intent.agent, current, state.environment.space, state.tick)(using config.actionHandler)
+
+  private def route[S](action: Action[S], sender: Agent[S], population: Population[S], space: Space, tick: Int)(using
+      handler: ActionHandler[S]
+  ): Population[S] =
+    val ctx = ActionContext(sender, space, population.newId, tick)
+    population.updating(action.recipient(sender.id))(handler(action, _, ctx))
+
+  private def move[S](agent: Agent[S], actions: List[Action[S]], environment: Environment[S]): Agent[S] =
     val velocity = velocityOf(actions, agent.velocity)
     val (position, resolved) = environment.boundaryPolicy(agent.position + velocity, velocity, environment.space)
     agent.withMotion(position, resolved)
