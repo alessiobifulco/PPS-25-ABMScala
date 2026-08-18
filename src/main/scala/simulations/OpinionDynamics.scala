@@ -19,6 +19,8 @@ object OpinionDynamics:
   private val convergenceRate = 0.02
   private val separationRadius = 15.0
   private val opinionRange = 10.0
+  private val spaceCenter = P2d.apply(300, 300)
+  private val radius = 300
 
   given Continuous[Opinion] with
     override def extract(state: Opinion): Double = state.value
@@ -29,7 +31,7 @@ object OpinionDynamics:
   private def different(a: Opinion, b: Opinion): Boolean = !similar(a, b)
 
   val config: SimulationConfig[Opinion] = Simulation.of[Opinion]:
-    space(RectangularSpace(800, 600), BoundaryPolicy.wrap)
+    space(CircularSpace(spaceCenter, radius), BoundaryPolicy.wrap)
     perception(60.0)
     population(populationSize, _ => Opinion(math.random() * opinionRange))
     behaviour:
