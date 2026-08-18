@@ -1,7 +1,6 @@
 package dsl
 
 import domain.*
-import dsl.DiscreteRules.Chance
 
 object ConditionalBehaviour:
 
@@ -16,10 +15,12 @@ object ConditionalBehaviour:
 
     infix def and(other: ActionSource[S]): ActionSource[S] = ctx => source(ctx) ++ other(ctx)
 
-    infix def vanishingWith(c: Chance): ActionSource[S] = ctx =>
-      math.random() match
-        case p if p < c.probability => source(ctx) :+ Die()
-        case _                      => source(ctx)
+    infix def orElse(other: ActionSource[S]): ActionSource[S] = ctx =>
+      source(ctx) match
+        case Nil     => other(ctx)
+        case actions => actions
+
+    infix def vanishingWith(c: Chance): ActionSource[S] = ctx => if c.happens then source(ctx) :+ Die() else source(ctx)
 
   def asDefault[S](source: ActionSource[S])(using builder: ChoicesBuilder[S]): Unit = builder.setDefault(source)
 
@@ -33,8 +34,31 @@ object ConditionalBehaviour:
       case vx if vx < 0 => List(Move(V2d(-speed, 0)))
       case _            => List(Move(V2d(speed, 0)))
 
+  private def moveTowards[S](target: P2d, speed: Double): ActionSource[S] =
+    ctx => List(Move((target - ctx.focus.position).normalized * speed))
+
+  def moveTowardsRemembered[S](speed: Double): ActionSource[S] = ctx =>
+    rememberedPosition(ctx) match
+      case Some(position) => moveTowards(position, speed)(ctx)
+      case _              => List.empty
+
   def stopMoving[S]: ActionSource[S] = _ => List(Move(V2d.zero))
 
   def die[S]: ActionSource[S] = _ => List(Die())
 
   def spawn[S](state: S): ActionSource[S] = _ => List(Spawn(state))
+
+  def tellNeighbours[S]: ActionSource[S] = ctx =>
+    ctx.focus.memory.flatMap(_.latest) match
+      case Some(belief) => ctx.neighbors.map(n => ShareMemory(n.id, belief.event))
+      case _            => List.empty
+
+  def learnFromNeighbours[S]: ActionSource[S] = ctx =>
+    ctx.heardBeliefs.maxByOption(_.at) match
+      case Some(belief) => List(Remember(belief.event))
+      case _            => List.empty
+
+  private def rememberedPosition[S](ctx: AgentContext[S]): Option[P2d] =
+    ctx.focus.memory.flatMap(_.sightings.lastOption).map(_.event) match
+      case Some(MemoryEvent.Sighting(_, position)) => Some(position)
+      case _                                       => Option.empty
