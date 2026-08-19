@@ -1,5 +1,6 @@
 package gui
 
+import domain.Shape
 import engine.SimulationConfig
 
 import java.awt.{BorderLayout, Dimension, GridBagLayout}
@@ -14,8 +15,6 @@ import javax.swing.WindowConstants
 
 object SimulationWindow:
   private val TimerDelayMs = 30
-  private val PanelWidth = 900
-  private val PanelHeight = 700
 
   def open[S](title: String, config: SimulationConfig[S], onBack: () => Unit)(using
       Renderable[S],
@@ -27,7 +26,7 @@ object SimulationWindow:
     val backButton = new JButton("<- Back")
     val controlPanel = new JPanel
     val frame = new JFrame(title)
-    val simulationPanel = new SimulationPanel[S](Nil)
+    val simulationPanel = new SimulationPanel[S]
     val centerPanel = new JPanel(new GridBagLayout)
 
     def refreshView(): Unit =
@@ -52,7 +51,10 @@ object SimulationWindow:
     controlPanel.add(restartButton)
     centerPanel.add(simulationPanel)
 
-    simulationPanel.setPreferredSize(new Dimension(PanelWidth, PanelHeight))
+    val dim = model.state.environment.space.shape match
+      case Shape.Rectangle(_, w, h) => new Dimension(w.toInt, h.toInt)
+      case Shape.Circle(_, r)       => new Dimension((r * 2).toInt, (r * 2).toInt)
+    simulationPanel.setPreferredSize(dim)
     frame.setLayout(new BorderLayout)
     frame.add(centerPanel, BorderLayout.CENTER)
     frame.add(controlPanel, BorderLayout.SOUTH)
