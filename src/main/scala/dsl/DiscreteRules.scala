@@ -10,11 +10,6 @@ object DiscreteRules:
   def exactlyNear(n: Int): NeighbourCount = NeighbourCount(_ == n)
   def fewerNear(n: Int): NeighbourCount = NeighbourCount(_ < n)
 
-  case class Chance(probability: Double):
-    assert(probability >= 0.0 && probability <= 1.0, "Probability must be between 0 and 1")
-
-  def chance(probability: Double): Chance = Chance(probability)
-
   final class CountingConfig[S](result: S, count: Int => Boolean) extends RuleBuilder[S]:
 
     private var neighbourState: Option[S] = Option.empty
@@ -40,7 +35,7 @@ object DiscreteRules:
           case s if s == from && count(ctx.neighbors.count(_.state == neighbour)) => Some(result)
           case _                                                                  => Option.empty
 
-  final class ChanceConfig[S](result: S, probability: Double) extends RuleBuilder[S]:
+  final class ChanceConfig[S](result: S, chance: Chance) extends RuleBuilder[S]:
 
     private var fromState: Option[S] = Option.empty
 
@@ -53,8 +48,8 @@ object DiscreteRules:
       val from = fromState.get
       ctx =>
         ctx.focus.state match
-          case s if s == from && math.random() < probability => Some(result)
-          case _                                             => Option.empty
+          case s if s == from && chance.happens => Some(result)
+          case _                                => Option.empty
 
   extension [S](result: S)
 
@@ -64,6 +59,6 @@ object DiscreteRules:
       config
 
     infix def when(c: Chance)(using r: RulesBuilder[S]): ChanceConfig[S] =
-      val config = ChanceConfig(result, c.probability)
+      val config = ChanceConfig(result, c)
       r.addRuleBuilder(config)
       config

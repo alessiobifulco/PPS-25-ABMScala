@@ -10,6 +10,7 @@ object Simulation:
   export ContinuousRules.*
   export ChoicesBuilder.behaviour
   export RulesBuilder.rules
+  export Chance.chance
 
   def of[S](config: SimulationBuilder[S] ?=> Unit): SimulationConfig[S] =
     val builder = SimulationBuilder[S]()
