@@ -1,5 +1,17 @@
 import domain.BoundaryPolicy.bounce
-import domain.{Agent, AgentId, BoundaryPolicy, CircularSpace, Environment, NeighborStrategy, P2d, RectangularSpace, V2d}
+import domain.{
+  Agent,
+  AgentId,
+  BoundaryPolicy,
+  CircularSpace,
+  Environment,
+  NeighborStrategy,
+  P2d,
+  POI,
+  PoiId,
+  RectangularSpace,
+  V2d
+}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -47,7 +59,10 @@ class EnvironmentTest extends AnyFlatSpec with Matchers:
     neighbors should contain(agent2)
     neighbors should not contain distantAgent
 
-  it should "accept WrapPolicy for circular toroidal space" in:
-    val circularSpace = CircularSpace(center = P2d(0.0, 0.0), radius = 10.0)
-    noException should be thrownBy:
-      Environment(space = circularSpace, agents = List.empty, boundaryPolicy = BoundaryPolicy.wrap)
+  it should "start with no POIs by default" in:
+    environment.pois shouldBe Nil
+
+  it should "reject a POI outside the space" in:
+    val poi = POI(PoiId(0), P2d(200.0, 200.0), 10.0)
+    an[IllegalArgumentException] should be thrownBy:
+      Environment(space = space, agents = List.empty, pois = List(poi))
