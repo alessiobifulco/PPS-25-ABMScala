@@ -5,8 +5,7 @@ import java.awt.Color
 import java.awt.Graphics
 import javax.swing.JPanel
 
-final class SimulationPanel[S](pois: List[POI])(using renderable: Renderable[S], poiRenderable: POIRenderable)
-    extends JPanel:
+final class SimulationPanel[S](using renderable: Renderable[S], poiRenderable: POIRenderable) extends JPanel:
 
   private var currentModel: Option[Model[S]] = None
 
@@ -24,11 +23,11 @@ final class SimulationPanel[S](pois: List[POI])(using renderable: Renderable[S],
       val offsetY = (getHeight - envHeight) / 2
       graphics.translate(offsetX, offsetY)
       drawBoundary(graphics)
-      drawPOIs(graphics)
+      drawPOIs(graphics, model)
       drawAgents(graphics, model)
       graphics.translate(-offsetX, -offsetY)
 
-  private def drawPOIs(graphics: Graphics): Unit = pois.foreach: poi =>
+  private def drawPOIs(graphics: Graphics, model: Model[S]): Unit = model.state.environment.pois.foreach: poi =>
     val color = poiRenderable.colorOf(poi)
     val x = poi.position.x.toInt
     val y = poi.position.y.toInt
