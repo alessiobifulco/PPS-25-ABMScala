@@ -13,7 +13,7 @@ object ConditionalBehaviour:
     infix def whenAgentIs(state: S)(using builder: ChoicesBuilder[S]): Unit = builder
       .addChoice(Choice(ctx => ctx.focus.state == state, source))
 
-    infix def and(other: ActionSource[S]): ActionSource[S] = ctx => source(ctx) ++ other(ctx)
+    infix def to(other: ActionSource[S]): ActionSource[S] = ctx => source(ctx) ++ other(ctx)
 
     infix def orElse(other: ActionSource[S]): ActionSource[S] = ctx =>
       source(ctx) match
@@ -34,12 +34,17 @@ object ConditionalBehaviour:
       case vx if vx < 0 => List(Move(V2d(-speed, 0)))
       case _            => List(Move(V2d(speed, 0)))
 
-  private def moveTowards[S](target: P2d, speed: Double): ActionSource[S] =
+  private def moveTowardsPosition[S](target: P2d, speed: Double): ActionSource[S] =
     ctx => List(Move((target - ctx.focus.position).normalized * speed))
+
+  def moveTowardsPoi[S](poi: POI, speed: Double): ActionSource[S] = moveTowardsPosition(poi.position, speed)
+
+  def rememberSightings[S](poiList: POI*): ActionSource[S] = ctx =>
+    poiList.toList.filter(poi => ctx.isInside(poi)).map(poi => Remember(MemoryEvent.Sighting(poi.id, poi.position)))
 
   def moveTowardsRemembered[S](speed: Double): ActionSource[S] = ctx =>
     rememberedPosition(ctx) match
-      case Some(position) => moveTowards(position, speed)(ctx)
+      case Some(position) => moveTowardsPosition(position, speed)(ctx)
       case _              => List.empty
 
   def stopMoving[S]: ActionSource[S] = _ => List(Move(V2d.zero))
