@@ -14,13 +14,14 @@ object OpinionDynamics:
 
   private val populationSize = 200
   private val speed = 2.0
+  private val perceptionRadius = 60.0
   private val influenceRadius = 20.0
   private val similarityThreshold = 2.0
   private val convergenceRate = 0.02
   private val separationRadius = 15.0
   private val opinionRange = 10.0
-  private val spaceCenter = P2d.apply(300, 300)
-  private val radius = 300
+  private val spaceCenter = P2d(300, 300)
+  private val spaceRadius = 300.0
 
   given Continuous[Opinion] with
     override def extract(state: Opinion): Double = state.value
@@ -31,9 +32,10 @@ object OpinionDynamics:
   private def different(a: Opinion, b: Opinion): Boolean = !similar(a, b)
 
   val config: SimulationConfig[Opinion] = Simulation.of[Opinion]:
-    space(CircularSpace(spaceCenter, radius), BoundaryPolicy.wrap)
-    perception(60.0)
-    population(populationSize, _ => Opinion(math.random() * opinionRange))
+    environment:
+      space(CircularSpace(spaceCenter, spaceRadius)) withBoundary wrap
+      perception(perceptionRadius)
+      population(populationSize) eachBeing Opinion(math.random() * opinionRange)
     behaviour:
       asDefault(follow[Opinion](similar) avoid different movingAt speed keepingApart separationRadius)
     rules:

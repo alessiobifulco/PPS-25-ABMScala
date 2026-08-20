@@ -8,7 +8,7 @@ private[dsl] case class EnvironmentSpec[S](
     perceptionRadius: Double,
     populationSize: Int,
     stateAt: Int => S,
-    pois: List[POI],
+    poiList: List[POI],
     memoryCapacity: Option[Int]
 )
 
@@ -29,9 +29,7 @@ object EnvironmentBuilder:
   def environment[S](block: EnvironmentBuilder[S] ?=> Unit)(using simBuilder: SimulationBuilder[S]): Unit =
     val builder = EnvironmentBuilder[S]()
     block(using builder)
-    val spec = builder.build()
-    simBuilder.setSpace(spec.space, spec.boundary).setPerceptionRadius(spec.perceptionRadius)
-      .setPopulationSize(spec.populationSize).setStateGenerator(spec.stateAt)
+    simBuilder.setEnvironment(builder.build())
 
   def space[S](s: Space)(using builder: EnvironmentBuilder[S]): SpaceConfig[S] =
     builder.setSpace(s, defaultBoundary)
@@ -60,23 +58,20 @@ object EnvironmentBuilder:
       case Some(previous) => generatedBy(i => if i == 0 then state else previous(i))
       case _              => generatedBy(_ => state)
 
-    private def generatedBy(generator: Int => S): PopulationConfig[S] =
+    private infix def generatedBy(generator: Int => S): PopulationConfig[S] =
       current = Some(generator)
       builder.setPopulation(size, generator)
       this
 
   private class EnvironmentBuilderImpl[S] extends EnvironmentBuilder[S]:
-    private var space: Space = RectangularSpace(800, 600)
-    private var boundary: BoundaryPolicy = defaultBoundary
+    private var world: Option[(Space, BoundaryPolicy)] = None
     private var perceptionRadius: Double = 10.0
     private var populationSize: Int = 0
     private var stateAt: Option[Int => S] = None
     private var poisAcc: List[POI] = Nil
     private var memoryCapacity: Option[Int] = None
 
-    override def setSpace(s: Space, b: BoundaryPolicy): Unit =
-      space = s
-      boundary = b
+    override def setSpace(s: Space, b: BoundaryPolicy): Unit = world = Some((s, b))
 
     override def setPerceptionRadius(radius: Double): Unit = perceptionRadius = radius
 
@@ -88,8 +83,8 @@ object EnvironmentBuilder:
 
     override def addPoi(p: POI): Unit = poisAcc = p :: poisAcc
 
-    override def build(): EnvironmentSpec[S] = stateAt match
-      case Some(generator) =>
-        require(populationSize > 0, "Population size must be positive")
-        EnvironmentSpec(space, boundary, perceptionRadius, populationSize, generator, poisAcc.reverse, memoryCapacity)
-      case _ => throw IllegalStateException("Cannot build an environment without a population!")
+    override def build(): EnvironmentSpec[S] =
+      assert((world, stateAt).toList.forall(_.nonEmpty), "Cannot build without setting all parameters first!")
+      assert(populationSize > 0, "Population size must be positive")
+      val (space, boundary) = world.get
+      EnvironmentSpec(space, boundary, perceptionRadius, populationSize, stateAt.get, poisAcc.reverse, memoryCapacity)

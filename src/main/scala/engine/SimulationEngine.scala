@@ -22,14 +22,27 @@ object SimulationEngine:
   def tick[S](state: SimulationState[S], config: SimulationConfig[S]): SimulationState[S] =
     val intents = perceive(state, config).map(decide(state.environment, config))
     val population = deliver(intents, state, config)
-    SimulationState(state.environment.withAgents(population.agents), state.tick + 1, population.nextId)
+    SimulationState(
+      state.environment.withAgents(population.agents),
+      state.tick + 1,
+      population.nextId,
+      residenciesOf(population.agents, state)
+    )
 
   private def nextAvailableId[S](agents: List[Agent[S]]): Int = agents
     .foldLeft(0)((next, agent) => next.max(agent.id.value + 1))
 
   private def perceive[S](state: SimulationState[S], config: SimulationConfig[S]): List[AgentContext[S]] =
     val findNeighbors = state.environment.neighborhoods(config.perceptionRadius)(using config.neighborStrategy)
-    state.environment.agents.map(agent => AgentContext(agent, findNeighbors(agent), state.tick))
+    state.environment.agents
+      .map(agent => AgentContext(agent, findNeighbors(agent), state.tick, state.residencyOf(agent.id)))
+
+  private def residenciesOf[S](agents: List[Agent[S]], state: SimulationState[S]): Map[AgentId, Residency] = agents
+    .map(agent => agent.id -> stayOf(agent, state.environment.pois, state.residencyOf(agent.id))).toMap
+
+  private def stayOf[S](agent: Agent[S], pois: List[POI], previous: Residency): Residency = pois.foldLeft(previous)(
+    (residency, poi) => if poi.contains(agent.position) then residency.tickFor(poi.id) else residency.reset(poi.id)
+  )
 
   private def decide[S](environment: Environment[S], config: SimulationConfig[S])(ctx: AgentContext[S]): Intent[S] =
     val actions = config.behavior(ctx)
