@@ -16,23 +16,27 @@ object Epidemic:
   import Health.*
 
   private val populationSize = 200
+  private val width = 800
+  private val height = 600
+  private val perceptionRadius = 15.0
   private val speed = 2.0
   private val mortalityChance = 0.001
   private val recoveryChance = 0.002
   private val decayChance = 0.01
 
   val config: SimulationConfig[Health] = Simulation.of[Health]:
-    space(RectangularSpace(800, 600), BoundaryPolicy.bounce)
-    perception(15.0)
-    population(populationSize, i => if i == 0 then Infected else Healthy)
+    environment:
+      space(RectangularSpace(width, height)) withBoundary bounce
+      perception(perceptionRadius)
+      population(populationSize) of Healthy withOne Infected
     behaviour:
       stopMoving[Health] vanishingWith chance(decayChance) whenAgentIs Dead
       moveHorizontally[Health](speed) whenAgentIs Infected
       asDefault(moveRandomly[Health](speed))
     rules:
-      Infected when atLeastNear(1) withState Infected whenAgentIs Healthy
-      Dead when chance(mortalityChance) whenAgentIs Infected
-      Healthy when chance(recoveryChance) whenAgentIs Infected
+      Infected when atLeastNear(1, Infected) whenAgentIs Healthy
+      Dead when chanceOf(mortalityChance) whenAgentIs Infected
+      Healthy when chanceOf(recoveryChance) whenAgentIs Infected
 
   given Renderable[Health] with
     override def colorOf(state: Health): Color = state match

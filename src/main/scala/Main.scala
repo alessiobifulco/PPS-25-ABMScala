@@ -1,4 +1,6 @@
 import gui.{MainMenu, SimulationOption, SimulationWindow}
+import simulations.AntColony
+import simulations.AntColony.given
 import simulations.Epidemic
 import simulations.Epidemic.given
 import simulations.OpinionDynamics
@@ -14,5 +16,9 @@ def run(): Unit =
     new SimulationOption:
       def name: String = "Sim 2 - Opinion Dynamics"
       def start(onBack: () => Unit): Unit = SimulationWindow.open("Opinion Dynamics", OpinionDynamics.config, onBack)
+    ,
+    new SimulationOption:
+      def name: String = "Sim 3 - Formiche"
+      def start(onBack: () => Unit): Unit = SimulationWindow.open("Formiche", AntColony.config, onBack)
   )
   MainMenu.open(options)
