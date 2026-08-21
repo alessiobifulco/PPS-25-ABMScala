@@ -9,6 +9,7 @@ case class Belief(event: MemoryEvent, at: Int)
 trait Memory:
   def beliefs: List[Belief]
   def remember(tick: Int, event: MemoryEvent): Memory
+  def cleared: Memory
   def latest: Option[Belief]
   def sightings: List[Belief]
 
@@ -23,6 +24,8 @@ object Memory:
     override def remember(tick: Int, event: MemoryEvent): Memory = copy(beliefs =
       (beliefs :+ Belief(event, tick)).takeRight(capacity)
     )
+
+    override def cleared: Memory = copy(beliefs = List.empty)
 
     override def latest: Option[Belief] = beliefs.lastOption
 
