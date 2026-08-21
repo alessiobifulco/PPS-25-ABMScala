@@ -20,6 +20,9 @@ object ConditionalBehaviour:
         case Nil     => other(ctx)
         case actions => actions
 
+    infix def onlyIf(condition: AgentContext[S] => Boolean): ActionSource[S] =
+      ctx => if condition(ctx) then source(ctx) else List.empty
+
     infix def vanishingWith(c: Chance): ActionSource[S] = ctx => if c.happens then source(ctx) :+ Die() else source(ctx)
 
   def asDefault[S](source: ActionSource[S])(using builder: ChoicesBuilder[S]): Unit = builder.setDefault(source)
@@ -42,14 +45,26 @@ object ConditionalBehaviour:
   def rememberSightings[S](poiList: POI*): ActionSource[S] = ctx =>
     poiList.toList.filter(poi => ctx.isInside(poi)).map(poi => Remember(MemoryEvent.Sighting(poi.id, poi.position)))
 
+  def rememberEncounters[S](goesWell: S => Boolean): ActionSource[S] = ctx =>
+    nearest(ctx, ctx.neighbors) match
+      case Some(other) => List(Remember(MemoryEvent.Encounter(other.id, goesWell(other.state))))
+      case _           => List.empty
+
   def moveTowardsRemembered[S](speed: Double): ActionSource[S] = ctx =>
     rememberedPosition(ctx) match
       case Some(position) => moveTowardsPosition(position, speed)(ctx)
       case _              => List.empty
 
+  def avoidRemembered[S](speed: Double, about: MemoryEvent => Boolean): ActionSource[S] = ctx =>
+    nearest(ctx, ctx.neighbors.filter(other => rememberedAgents(ctx, about).contains(other.id))) match
+      case Some(other) => List(Move((ctx.focus.position - other.position).normalized * speed))
+      case _           => List.empty
+
   def stopMoving[S]: ActionSource[S] = _ => List(Move(V2d.zero))
 
   def die[S]: ActionSource[S] = _ => List(Die())
+
+  def forget[S]: ActionSource[S] = _ => List(Forget())
 
   def spawn[S](state: S): ActionSource[S] = _ => List(Spawn(state))
 
@@ -58,10 +73,17 @@ object ConditionalBehaviour:
       case Some(belief) => ctx.neighbors.map(n => ShareMemory(n.id, belief.event))
       case _            => List.empty
 
-  def learnFromNeighbours[S]: ActionSource[S] = ctx =>
-    ctx.heardBeliefs.maxByOption(_.at) match
+  def learnFromNeighbours[S](about: MemoryEvent => Boolean = _ => true): ActionSource[S] = ctx =>
+    ctx.heardBeliefs.filter(belief => about(belief.event)).maxByOption(_.at) match
       case Some(belief) => List(Remember(belief.event))
       case _            => List.empty
+
+  private def nearest[S](ctx: AgentContext[S], among: List[Agent[S]]): Option[Agent[S]] = among
+    .minByOption(other => (other.position - ctx.focus.position).length)
+
+  private def rememberedAgents[S](ctx: AgentContext[S], about: MemoryEvent => Boolean): List[AgentId] = ctx.focus
+    .remembers.map(_.event).filter(about).collect:
+      case MemoryEvent.Encounter(other, _) => other
 
   private def rememberedPosition[S](ctx: AgentContext[S]): Option[P2d] =
     ctx.focus.memory.flatMap(_.sightings.lastOption).map(_.event) match

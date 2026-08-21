@@ -16,6 +16,7 @@ object ActionHandler:
       case Spawn(state)          => List(recipient, Agent(ctx.freshId, ctx.space.randomPosition, V2d.random(), state))
       case Remember(event)       => List(recording(recipient, ctx.tick, event))
       case ShareMemory(_, event) => List(recording(recipient, ctx.tick, event))
+      case Forget()              => List(recipient.withMemory(recipient.memory.map(_.cleared)))
       case _                     => List(recipient)
 
     private def recording(agent: Agent[S], tick: Int, event: MemoryEvent): Agent[S] = agent
