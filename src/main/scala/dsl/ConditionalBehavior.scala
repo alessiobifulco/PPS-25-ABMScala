@@ -21,6 +21,9 @@ object ConditionalBehavior:
         case Nil     => other(ctx)
         case actions => actions
 
+    infix def onlyIf(condition: Condition[S]): ActionSource[S] =
+      ctx => if condition(ctx) then source(ctx) else List.empty
+
     infix def vanishingWith(c: Chance): ActionSource[S] = ctx => if c.happens then source(ctx) :+ Die() else source(ctx)
 
   def asDefault[S](source: ActionSource[S])(using builder: BehaviorsBuilder[S]): Unit = builder

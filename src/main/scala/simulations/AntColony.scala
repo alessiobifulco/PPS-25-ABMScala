@@ -5,7 +5,6 @@ import engine.SimulationConfig
 import gui.Renderable
 import dsl.*
 import dsl.Simulation.*
-import dsl.ConditionalBehavior.to
 
 import java.awt.Color
 
