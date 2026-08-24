@@ -1,9 +1,8 @@
 import gui.{MainMenu, SimulationOption, SimulationWindow}
-import simulations.{AntColony, Epidemic, OpinionDynamics, TrustingTrust}
+import simulations.{AntColony, Epidemic, OpinionDynamics}
 import simulations.AntColony.given
 import simulations.Epidemic.given
 import simulations.OpinionDynamics.given
-import simulations.TrustingTrust.given
 
 @main
 def run(): Unit =
@@ -19,9 +18,5 @@ def run(): Unit =
     new SimulationOption:
       def name: String = "Sim 3 - Ant Colony"
       def start(onBack: () => Unit): Unit = SimulationWindow.open("Ant Colony", AntColony.config, onBack)
-    ,
-    new SimulationOption:
-      def name: String = "Sim 4 - Trusting Trust"
-      def start(onBack: () => Unit): Unit = SimulationWindow.open("Trusting Trust", TrustingTrust.config, onBack)
   )
   MainMenu.open(options)
