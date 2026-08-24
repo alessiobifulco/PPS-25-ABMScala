@@ -1,9 +1,10 @@
 package dsl
 
 import domain.*
-import dsl.ConditionalBehaviour.ActionSource
+import domain.Action.*
+import dsl.ConditionalBehavior.ActionSource
 
-object CompositeBehaviour:
+object CompositeBehavior:
 
   private def normalizedOrElse(v: V2d, fallback: => V2d): V2d = if v.length > 0 then v.normalized else fallback
 
@@ -76,6 +77,6 @@ object CompositeBehaviour:
       val direction = (cohesionForce(ctx.focus, followed) * cohesionWeight) +
         (alignmentForce(followed) * alignmentWeight) + (separationForce(ctx.focus, avoided) * separationWeight) +
         (heading * headingWeight)
-      List(Move(normalizedOrElse(direction, heading) * speed))
+      List(Move[S](normalizedOrElse(direction, heading) * speed))
 
   def follow[S](p: (S, S) => Boolean): FlockConfig[S] = FlockConfig[S](p)

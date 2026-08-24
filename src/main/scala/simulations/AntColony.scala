@@ -5,7 +5,7 @@ import engine.SimulationConfig
 import gui.Renderable
 import dsl.*
 import dsl.Simulation.*
-import dsl.ConditionalBehaviour.to
+import dsl.ConditionalBehavior.to
 
 import java.awt.Color
 
@@ -39,12 +39,12 @@ object AntColony:
       poi(nest)
       poi(nearFood)
       poi(farFood)
-    behaviour:
+    behavior:
       tellNeighbours[Task] to moveTowardsPoi(nest, speed) whenAgentIs Carrying
       rememberSightings[Task](nearFood, farFood) to searchForFood whenAgentIs Foraging
     rules:
-      Carrying when (settledIn(nearFood) or settledIn(farFood)) whenAgentIs Foraging
-      Foraging when inside(nest) whenAgentIs Carrying
+      Carrying whenAgentIs Foraging iff (settledIn(nearFood) or settledIn(farFood))
+      Foraging whenAgentIs Carrying iff inside(nest)
 
   given Renderable[Task] with
     override def colorOf(state: Task): Color = state match

@@ -4,9 +4,8 @@ import domain.*
 
 case class SimulationConfig[S](
     initialEnvironment: Environment[S],
-    behavior: Behavior[S],
+    behaviors: List[Behavior[S]],
     perceptionRadius: Double,
-    rule: InteractionRule[S] = InteractionRule.firstOf[S](),
-    neighborStrategy: NeighborStrategy[S] = NeighborStrategy.bruteForce[S],
-    actionHandler: ActionHandler[S] = ActionHandler.default[S]
+    rules: List[InteractionRule[S]] = List.empty,
+    neighborStrategy: NeighborStrategy[S] = NeighborStrategy.bruteForce[S]
 )

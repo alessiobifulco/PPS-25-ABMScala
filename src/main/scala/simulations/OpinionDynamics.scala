@@ -36,10 +36,10 @@ object OpinionDynamics:
       space(CircularSpace(spaceCenter, spaceRadius)) withBoundary wrap
       perception(perceptionRadius)
       population(populationSize) eachBeing Opinion(math.random() * opinionRange)
-    behaviour:
+    behavior:
       asDefault(follow[Opinion](similar) avoid different movingAt speed keepingApart separationRadius)
     rules:
-      convergeTowardsAverage[Opinion] within influenceRadius among similar atRate convergenceRate
+      convergeTowardsAverage[Opinion](within = influenceRadius, among = similar, atRate = convergenceRate)
 
   given Renderable[Opinion] with
     override def colorOf(state: Opinion): Color =

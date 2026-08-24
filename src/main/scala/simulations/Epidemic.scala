@@ -29,14 +29,14 @@ object Epidemic:
       space(RectangularSpace(width, height)) withBoundary bounce
       perception(perceptionRadius)
       population(populationSize) of Healthy withOne Infected
-    behaviour:
+    behavior:
       stopMoving[Health] vanishingWith chance(decayChance) whenAgentIs Dead
       moveHorizontally[Health](speed) whenAgentIs Infected
       asDefault(moveRandomly[Health](speed))
     rules:
-      Infected when atLeastNear(1, Infected) whenAgentIs Healthy
-      Dead when chanceOf(mortalityChance) whenAgentIs Infected
-      Healthy when chanceOf(recoveryChance) whenAgentIs Infected
+      Infected whenAgentIs Healthy iff atLeastNear(1, Infected)
+      Dead whenAgentIs Infected iff chanceOf(mortalityChance)
+      Healthy whenAgentIs Infected iff chanceOf(recoveryChance)
 
   given Renderable[Health] with
     override def colorOf(state: Health): Color = state match
