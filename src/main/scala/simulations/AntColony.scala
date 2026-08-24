@@ -24,9 +24,9 @@ object AntColony:
   private val recall = 3
   private val harvestDelay = 3
 
-  private val nest = POI(PoiId(0), P2d(400, 300), 30)
-  private val nearFood = POI(PoiId(1), P2d(120, 120), 25, harvestDelay)
-  private val farFood = POI(PoiId(2), P2d(680, 480), 25, harvestDelay)
+  private val nest = POI(PoiId(0), "Nest", P2d(400, 300), 30)
+  private val nearFood = POI(PoiId(1), "Near Food", P2d(120, 120), 25, harvestDelay)
+  private val farFood = POI(PoiId(2), "Far Food", P2d(680, 480), 25, harvestDelay)
 
   private def searchForFood: ActionSource[Task] = moveTowardsRemembered[Task](speed) orElse moveRandomly(speed)
 
