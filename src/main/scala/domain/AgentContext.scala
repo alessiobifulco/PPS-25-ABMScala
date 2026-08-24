@@ -1,5 +1,7 @@
 package domain
 
+type Condition[S] = AgentContext[S] => Boolean
+
 case class AgentContext[S](
     focus: Agent[S],
     neighbors: List[Agent[S]],
