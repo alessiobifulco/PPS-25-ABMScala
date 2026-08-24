@@ -43,7 +43,7 @@ object SimulationEngine:
 
   private def grow[S](intents: List[Intent[S]], state: SimulationState[S]): Population[S] = intents
     .foldLeft(Population(List.empty[Agent[S]], state.nextId)): (population, intent) =>
-      population.joinedBy(survivors(intent, state.tick), newborns(intent, population.newId, state.environment.space))
+      population.joinedBy(survivors(intent, state.tick), newborns(intent, population.newId))
 
   private def survivors[S](intent: Intent[S], tick: Int): List[Agent[S]] =
     if intent.actions.exists(isDeath) then List.empty
@@ -60,9 +60,9 @@ object SimulationEngine:
     case Die() => true
     case _     => false
 
-  private def newborns[S](intent: Intent[S], firstId: AgentId, space: Space): List[Agent[S]] = intent.actions
+  private def newborns[S](intent: Intent[S], firstId: AgentId): List[Agent[S]] = intent.actions
     .collect { case Spawn(state) => state }.zipWithIndex
-    .map((state, offset) => Agent(AgentId(firstId.value + offset), space.randomPosition, V2d.random(), state))
+    .map((state, offset) => Agent(AgentId(firstId.value + offset), intent.agent.position, V2d.random(), state))
 
   private def messages[S](intents: List[Intent[S]]): List[(AgentId, MemoryEvent)] = intents.flatMap(_.actions)
     .collect { case Tell(target, event) => (target, event) }
