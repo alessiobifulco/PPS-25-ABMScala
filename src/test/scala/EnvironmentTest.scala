@@ -63,6 +63,6 @@ class EnvironmentTest extends AnyFlatSpec with Matchers:
     environment.pois shouldBe Nil
 
   it should "reject a POI outside the space" in:
-    val poi = POI(PoiId(0), P2d(200.0, 200.0), 10.0)
+    val poi = POI(PoiId(0), "name", P2d(200.0, 200.0), 10.0)
     an[IllegalArgumentException] should be thrownBy:
       Environment(space = space, agents = List.empty, pois = List(poi))

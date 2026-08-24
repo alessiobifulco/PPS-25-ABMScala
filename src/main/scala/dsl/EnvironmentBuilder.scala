@@ -58,7 +58,7 @@ object EnvironmentBuilder:
       case Some(previous) => generatedBy(i => if i == 0 then state else previous(i))
       case _              => generatedBy(_ => state)
 
-    private infix def generatedBy(generator: Int => S): PopulationConfig[S] =
+    private def generatedBy(generator: Int => S): PopulationConfig[S] =
       current = Some(generator)
       builder.setPopulation(size, generator)
       this
@@ -83,8 +83,9 @@ object EnvironmentBuilder:
 
     override def addPoi(p: POI): Unit = poisAcc = p :: poisAcc
 
-    override def build(): EnvironmentSpec[S] =
-      assert((world, stateAt).toList.forall(_.nonEmpty), "Cannot build without setting all parameters first!")
-      assert(populationSize > 0, "Population size must be positive")
-      val (space, boundary) = world.get
-      EnvironmentSpec(space, boundary, perceptionRadius, populationSize, stateAt.get, poisAcc.reverse, memoryCapacity)
+    override def build(): EnvironmentSpec[S] = (world, stateAt) match
+      case (Some((space, boundary)), Some(generator)) =>
+        require(populationSize > 0, "Population size must be positive")
+        EnvironmentSpec(space, boundary, perceptionRadius, populationSize, generator, poisAcc.reverse, memoryCapacity)
+      case (None, _) => throw IllegalStateException("Cannot build an environment without a space!")
+      case (_, None) => throw IllegalStateException("Cannot build an environment without a population!")

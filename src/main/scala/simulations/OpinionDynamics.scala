@@ -45,3 +45,10 @@ object OpinionDynamics:
     override def colorOf(state: Opinion): Color =
       val ratio = (state.value / opinionRange).max(0).min(1)
       Color(ratio.toFloat, 0f, (1 - ratio).toFloat)
+
+    override def labelOf(state: Opinion): String = state.value match
+      case v if v < 2.0 => "Very Low"
+      case v if v < 4.0 => "Low"
+      case v if v < 6.0 => "Medium"
+      case v if v < 8.0 => "High"
+      case _            => "Very High"

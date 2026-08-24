@@ -60,6 +60,13 @@ final class SimulationPanel[S](using renderable: Renderable[S], poiRenderable: P
       SimulationPanel.AgentDiameter,
       SimulationPanel.AgentDiameter
     )
+    graphics.setColor(Color.BLACK)
+    graphics.drawOval(
+      x - SimulationPanel.AgentRadius,
+      y - SimulationPanel.AgentRadius,
+      SimulationPanel.AgentDiameter,
+      SimulationPanel.AgentDiameter
+    )
 
 object SimulationPanel:
   private val AgentRadius = 4
