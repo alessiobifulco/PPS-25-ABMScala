@@ -68,11 +68,10 @@ final class StatisticsPanel[S](using renderable: Renderable[S]) extends JPanel:
     val total = agents.size.max(1)
     tickLabel.setText(s"Tick: ${model.state.tick}")
     agentsLabel.setText(s"Agents: ${agents.size}")
-
-    val snapshot = agents.groupBy(agent => renderable.labelOf(agent.state))
-      .map((label, group) => label -> group.size.toDouble / total * 100)
-    labelColors = labelColors ++ snapshot.keys.filterNot(labelColors.contains)
-      .map(label => label -> renderable.colorOf(agents.find(a => renderable.labelOf(a.state) == label).get.state))
+    val groupedAgents = agents.groupBy(agent => renderable.labelOf(agent.state))
+    val snapshot = groupedAgents.map((label, group) => label -> group.size.toDouble / total * 100)
+    labelColors = labelColors ++ groupedAgents.collect:
+      case (label, group) if !labelColors.contains(label) => label -> renderable.colorOf(group.head.state)
     val allLabels = labelColors.keys.toList
     val completeSnapshot = allLabels
       .foldLeft(snapshot)((acc, label) => if acc.contains(label) then acc else acc + (label -> 0.0))
@@ -177,9 +176,8 @@ final class StatisticsPanel[S](using renderable: Renderable[S]) extends JPanel:
           val pointX = chartX + (tick.toDouble / (totalTicks - 1) * chartWidth).toInt
           val pointY = chartY + chartHeight - (percentage / 100.0 * chartHeight).toInt
           (pointX, pointY)
-        points.sliding(2).foreach:
-          case List((fromX, fromY), (toX, toY)) => graphics2D.drawLine(fromX, fromY, toX, toY)
-          case _                                =>
+        points.zip(points.drop(1)).foreach:
+          case ((fromX, fromY), (toX, toY)) => graphics2D.drawLine(fromX, fromY, toX, toY)
 
     private def drawAxisLabels(
         graphics2D: Graphics2D,

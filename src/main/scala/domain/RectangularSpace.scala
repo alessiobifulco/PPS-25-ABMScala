@@ -1,6 +1,6 @@
 package domain
 
-final case class RectangularSpace(width: Double, height: Double) extends Space with Toroidal:
+final case class RectangularSpace(width: Double, height: Double) extends Space, Toroidal:
   require(width > 0, "Width must be positive")
   require(height > 0, "Height must be positive")
 
