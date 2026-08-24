@@ -26,6 +26,18 @@ object DiscreteRules:
 
   def settledIn[S](poi: POI): Condition[S] = ctx => ctx.hasSettledIn(poi)
 
+  def farFrom[S](target: P2d, distance: Double): Condition[S] = ctx => (ctx.focus.position - target).length >= distance
+
+  def recentlySighted[S](within: Int): Condition[S] =
+    ctx => ctx.focus.remembers.exists(belief => isSighting(belief.event) && belief.at >= ctx.tick - within)
+
+  def nothingSightedIn[S](ticks: Int): Condition[S] =
+    ctx => ctx.focus.remembers.forall(belief => !isSighting(belief.event) || belief.at < ctx.tick - ticks)
+
+  private def isSighting(event: MemoryEvent): Boolean = event match
+    case MemoryEvent.Sighting(_, _) => true
+    case _                          => false
+
   extension [S](condition: Condition[S])
 
     infix def and(other: Condition[S]): Condition[S] = ctx => condition(ctx) && other(ctx)

@@ -36,14 +36,20 @@ object ConditionalBehavior:
       case vx if vx < 0 => List(Move(V2d(-speed, 0)))
       case _            => List(Move(V2d(speed, 0)))
 
-  private def moveTowardsPosition[S](target: P2d, speed: Double): ActionSource[S] =
+  def moveTowards[S](target: P2d, speed: Double): ActionSource[S] =
     ctx => List(Move((target - ctx.focus.position).normalized * speed))
 
-  def moveTowardsPoi[S](poi: POI, speed: Double): ActionSource[S] = moveTowardsPosition(poi.position, speed)
+  def moveAwayFrom[S](target: P2d, speed: Double): ActionSource[S] =
+    ctx => List(Move((ctx.focus.position - target).normalized * speed))
 
   def moveTowardsRemembered[S](speed: Double): ActionSource[S] = ctx =>
     rememberedPosition(ctx) match
-      case Some(position) => moveTowardsPosition(position, speed)(ctx)
+      case Some(position) => moveTowards(position, speed)(ctx)
+      case _              => List.empty
+
+  def moveAwayFromRemembered[S](speed: Double): ActionSource[S] = ctx =>
+    rememberedPosition(ctx) match
+      case Some(position) => moveAwayFrom(position, speed)(ctx)
       case _              => List.empty
 
   def rememberSightings[S](poiList: POI*): ActionSource[S] = ctx =>
