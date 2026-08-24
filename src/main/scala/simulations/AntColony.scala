@@ -40,7 +40,7 @@ object AntColony:
       poi(nearFood)
       poi(farFood)
     behavior:
-      tellNeighbours[Task] to moveTowardsPoi(nest, speed) whenAgentIs Carrying
+      tellNeighbours[Task] to moveTowards(nest.position, speed) whenAgentIs Carrying
       rememberSightings[Task](nearFood, farFood) to searchForFood whenAgentIs Foraging
     rules:
       Carrying whenAgentIs Foraging iff (settledIn(nearFood) or settledIn(farFood))
