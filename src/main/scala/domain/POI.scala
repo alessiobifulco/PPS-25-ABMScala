@@ -8,7 +8,7 @@ object PoiId:
 
   extension (id: PoiId) def value: Int = id
 
-case class POI(id: PoiId, position: P2d, radius: Double, activationDelay: Int = 0):
+case class POI(id: PoiId, name: String, position: P2d, radius: Double, activationDelay: Int = 0):
   require(radius > 0, "Radius must be positive")
   require(activationDelay >= 0, "Activation delay cannot be negative")
 
