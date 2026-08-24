@@ -44,5 +44,5 @@ object SimulationBuilder:
         )
 
       case None => throw new IllegalStateException(
-        "Cannot build the simulation: environment is missing. Please call setEnvironment() first."
-      )
+          "Cannot build the simulation: environment is missing. Please call setEnvironment() first."
+        )

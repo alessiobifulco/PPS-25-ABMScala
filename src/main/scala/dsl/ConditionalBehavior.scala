@@ -21,8 +21,7 @@ object ConditionalBehavior:
         case Nil     => other(ctx)
         case actions => actions
 
-    infix def vanishingWith(c: Chance): ActionSource[S] = ctx =>
-      if c.happens then source(ctx) :+ Die() else source(ctx)
+    infix def vanishingWith(c: Chance): ActionSource[S] = ctx => if c.happens then source(ctx) :+ Die() else source(ctx)
 
   def asDefault[S](source: ActionSource[S])(using builder: BehaviorsBuilder[S]): Unit = builder
     .add(Behavior(Option.empty[S])(source))
@@ -47,8 +46,8 @@ object ConditionalBehavior:
       case Some(position) => moveTowardsPosition(position, speed)(ctx)
       case _              => List.empty
 
-  def rememberSightings[S](poiList: POI*): ActionSource[S] = ctx => poiList.toList
-    .filter(poi => ctx.isInside(poi)).map(poi => Remember(MemoryEvent.Sighting(poi.id, poi.position)))
+  def rememberSightings[S](poiList: POI*): ActionSource[S] = ctx =>
+    poiList.toList.filter(poi => ctx.isInside(poi)).map(poi => Remember(MemoryEvent.Sighting(poi.id, poi.position)))
 
   def stopMoving[S]: ActionSource[S] = _ => List(Move(V2d.zero))
 

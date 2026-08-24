@@ -32,8 +32,7 @@ object DiscreteRules:
 
     infix def or(other: Condition[S]): Condition[S] = ctx => condition(ctx) || other(ctx)
 
-  extension [S](result: S)
-    infix def whenAgentIs(from: S): Transition[S] = Transition(result, from)
+  extension [S](result: S) infix def whenAgentIs(from: S): Transition[S] = Transition(result, from)
 
   extension [S](transition: Transition[S])
     infix def iff(condition: Condition[S])(using builder: RulesBuilder[S]): Unit = builder
