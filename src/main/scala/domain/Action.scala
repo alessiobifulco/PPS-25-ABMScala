@@ -1,17 +1,8 @@
 package domain
 
-trait Action[S]:
-  def recipient(sender: AgentId): AgentId = sender
-
-case class Move[S](velocity: V2d) extends Action[S]
-
-case class Spawn[S](state: S) extends Action[S]
-
-case class Die[S]() extends Action[S]
-
-case class Remember[S](event: MemoryEvent) extends Action[S]
-
-case class Forget[S]() extends Action[S]
-
-case class ShareMemory[S](target: AgentId, event: MemoryEvent) extends Action[S]:
-  override def recipient(sender: AgentId): AgentId = target
+enum Action[S]:
+  case Move(velocity: V2d) extends Action[S]
+  case Remember(event: MemoryEvent) extends Action[S]
+  case Tell(target: AgentId, event: MemoryEvent) extends Action[S]
+  case Spawn(state: S) extends Action[S]
+  case Die() extends Action[S]
