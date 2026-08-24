@@ -31,18 +31,15 @@ object SimulationBuilder:
       rules = rules :+ rule
       this
 
-    override def build(): SimulationConfig[S] = environment match
-      case Some(spec) =>
-        val memory = spec.memoryCapacity.map(Memory.apply)
-        val agents = (0 until spec.populationSize).toList
-          .map(i => Agent(AgentId(i), spec.space.randomPosition, V2d.random(), spec.stateAt(i), memory))
-        SimulationConfig(
-          Environment(spec.space, agents, spec.boundary, spec.poiList),
-          behaviors,
-          spec.perceptionRadius,
-          rules
-        )
-
-      case None => throw new IllegalStateException(
-          "Cannot build the simulation: environment is missing. Please call setEnvironment() first."
-        )
+    override def build(): SimulationConfig[S] =
+      require(environment.nonEmpty, "Cannot build the simulation: environment is missing")
+      val spec = environment.get
+      val memory = spec.memoryCapacity.map(Memory.apply)
+      val agents = (0 until spec.populationSize).toList
+        .map(i => Agent(AgentId(i), spec.positionAt(i), V2d.random(), spec.stateAt(i), memory))
+      SimulationConfig(
+        Environment(spec.space, agents, spec.boundary, spec.poiList),
+        behaviors,
+        spec.perceptionRadius,
+        rules
+      )
