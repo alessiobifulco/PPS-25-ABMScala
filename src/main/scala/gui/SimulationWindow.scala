@@ -27,10 +27,17 @@ object SimulationWindow:
     val controlPanel = new JPanel
     val frame = new JFrame(title)
     val simulationPanel = new SimulationPanel[S]
-    val centerPanel = new JPanel(new GridBagLayout)
+    val statisticsPanel = new StatisticsPanel[S]
+    val innerPanel = new JPanel(new BorderLayout):
+      add(simulationPanel, BorderLayout.CENTER)
+      add(statisticsPanel, BorderLayout.EAST)
+
+    val centerPanel = new JPanel(new GridBagLayout):
+      add(innerPanel)
 
     def refreshView(): Unit =
       simulationPanel.render(model)
+      statisticsPanel.update(model)
       toggleButton.setText(if model.running then "Stop" else "Resume")
 
     def dispatch(msg: Msg): Unit =
@@ -49,7 +56,6 @@ object SimulationWindow:
     controlPanel.add(backButton)
     controlPanel.add(toggleButton)
     controlPanel.add(restartButton)
-    centerPanel.add(simulationPanel)
 
     val dim = model.state.environment.space.shape match
       case Shape.Rectangle(_, w, h) => new Dimension(w.toInt, h.toInt)
