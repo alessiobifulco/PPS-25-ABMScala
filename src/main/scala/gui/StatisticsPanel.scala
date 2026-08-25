@@ -12,6 +12,13 @@ import java.awt.Graphics2D
 import java.awt.RenderingHints
 import javax.swing.{BorderFactory, JButton, JLabel, JPanel}
 
+/** Panel used to display simulation statistics, agent state transitions, population distributions and agent density.
+  *
+  * @param renderable
+  *   renderer used to obtain labels and colors for agent states.
+  * @tparam S
+  *   type of the simulation state.
+  */
 final class StatisticsPanel[S](using renderable: Renderable[S]) extends JPanel:
 
   private val tickLabel = new JLabel("Tick: -")
@@ -22,9 +29,11 @@ final class StatisticsPanel[S](using renderable: Renderable[S]) extends JPanel:
   private var labelColors: Map[String, Color] = Map.empty
   private var running = true
   private val toggleStatsButton = new JButton("Stop Stats")
+
   toggleStatsButton.addActionListener: _ =>
     running = !running
     toggleStatsButton.setText(if running then "Stop Stats" else "Resume Stats")
+
   private var stateTransitions: Int = 0
   private var previousLabels: Map[AgentId, String] = Map.empty
   private val transitionsLabel = new JLabel("Transitions: -")
@@ -62,23 +71,35 @@ final class StatisticsPanel[S](using renderable: Renderable[S]) extends JPanel:
   add(centerPanel, BorderLayout.CENTER)
   add(toggleStatsButton, BorderLayout.SOUTH)
 
+  /** Updates all statistics displayed by the panel using the current model.
+    *
+    * @param model
+    *   current simulation model used to compute the statistics.
+    */
   def update(model: Model[S]): Unit =
     if !running then return
+
     val agents = model.state.environment.agents
     val total = agents.size.max(1)
+
     tickLabel.setText(s"Tick: ${model.state.tick}")
     agentsLabel.setText(s"Agents: ${agents.size}")
+
     val groupedAgents = agents.groupBy(agent => renderable.labelOf(agent.state))
     val snapshot = groupedAgents.map((label, group) => label -> group.size.toDouble / total * 100)
+
     labelColors = labelColors ++ groupedAgents.collect:
       case (label, group) if !labelColors.contains(label) => label -> renderable.colorOf(group.head.state)
+
     val allLabels = labelColors.keys.toList
     val completeSnapshot = allLabels
       .foldLeft(snapshot)((acc, label) => if acc.contains(label) then acc else acc + (label -> 0.0))
+
     history = (history :+ completeSnapshot).takeRight(StatisticsPanel.MaxHistory)
 
     val currentLabels = agents.map(agent => agent.id -> renderable.labelOf(agent.state)).toMap
     val transitions = currentLabels.count((id, label) => previousLabels.get(id).exists(_ != label))
+
     stateTransitions += transitions
     previousLabels = currentLabels
     transitionsLabel.setText(s"Transitions: $stateTransitions")
@@ -89,25 +110,46 @@ final class StatisticsPanel[S](using renderable: Renderable[S]) extends JPanel:
       val poisStats = model.state.environment.pois.map: poi =>
         val count = agents.count(agent => poi.contains(agent.position))
         s"${poi.name}: $count"
+
       poisLabel.setText(s"<html>${poisStats.mkString("<br>")}</html>")
 
     val shape = model.state.environment.space.shape
     val (width, height) = shape match
-      case domain.Shape.Rectangle(_, w, h) => (w, h)
-      case domain.Shape.Circle(_, r)       => (r * 2, r * 2)
+      case domain.Shape.Rectangle(_, rectangleWidth, rectangleHeight) => (rectangleWidth, rectangleHeight)
+      case domain.Shape.Circle(_, radius)                             => (radius * 2, radius * 2)
+
     spaceWidth = width
     spaceHeight = height
 
     agentGrid = agents.foldLeft(Vector.fill(StatisticsPanel.GridSize, StatisticsPanel.GridSize)(0)): (grid, agent) =>
       val cellColumn = ((agent.position.x / spaceWidth) * StatisticsPanel.GridSize).toInt
         .min(StatisticsPanel.GridSize - 1).max(0)
+
       val cellRow = ((agent.position.y / spaceHeight) * StatisticsPanel.GridSize).toInt
         .min(StatisticsPanel.GridSize - 1).max(0)
+
       grid.updated(cellRow, grid(cellRow).updated(cellColumn, grid(cellRow)(cellColumn) + 1))
 
     chartPanel.repaint()
     densityPanel.repaint()
 
+  /** Draws a single item of a chart legend.
+    *
+    * @param graphics2D
+    *   graphics context used for drawing.
+    * @param color
+    *   color displayed by the legend item.
+    * @param label
+    *   text displayed by the legend item.
+    * @param itemX
+    *   horizontal position of the item.
+    * @param itemY
+    *   vertical position of the item.
+    * @param boxSize
+    *   size of the colored box.
+    * @param textOffset
+    *   distance between the colored box and its label.
+    */
   private def drawLegendItem(
       graphics2D: Graphics2D,
       color: Color,
@@ -122,6 +164,8 @@ final class StatisticsPanel[S](using renderable: Renderable[S]) extends JPanel:
     graphics2D.setColor(Color.BLACK)
     graphics2D.drawString(label, itemX + boxSize + textOffset, itemY + boxSize)
 
+  /** Panel used to draw the chart representing the historical distribution of agent states.
+    */
   private class ChartPanel extends JPanel:
 
     override protected def paintComponent(graphics: Graphics): Unit =
@@ -149,14 +193,17 @@ final class StatisticsPanel[S](using renderable: Renderable[S]) extends JPanel:
       graphics2D.drawRect(chartX, chartY, chartWidth, chartHeight)
       graphics2D.setColor(Color.GRAY)
       graphics2D.setFont(graphics2D.getFont.deriveFont(Font.PLAIN, StatisticsPanel.AxisFontSize))
-      for i <- 0 to StatisticsPanel.YTicks do
-        val percentage = i * 100 / StatisticsPanel.YTicks
-        val y = chartY + chartHeight - (percentage.toDouble / 100 * chartHeight).toInt
-        graphics2D.drawLine(chartX - StatisticsPanel.TickSize, y, chartX, y)
+
+      for index <- 0 to StatisticsPanel.YTicks do
+        val percentage = index * 100 / StatisticsPanel.YTicks
+        val coordinateY = chartY + chartHeight - (percentage.toDouble / 100 * chartHeight).toInt
+
+        graphics2D.drawLine(chartX - StatisticsPanel.TickSize, coordinateY, chartX, coordinateY)
+
         graphics2D.drawString(
           s"$percentage%",
           StatisticsPanel.Padding - StatisticsPanel.YLabelOffset,
-          y + StatisticsPanel.AxisFontSize.toInt / 2
+          coordinateY + StatisticsPanel.AxisFontSize.toInt / 2
         )
 
     private def drawLines(
@@ -169,13 +216,17 @@ final class StatisticsPanel[S](using renderable: Renderable[S]) extends JPanel:
         groups: List[(String, Color)]
     ): Unit =
       graphics2D.setStroke(new BasicStroke(StatisticsPanel.LineStroke))
+
       groups.foreach: (label, color) =>
         graphics2D.setColor(color)
+
         val points = history.zipWithIndex.map: (snapshot, tick) =>
           val percentage = snapshot.getOrElse(label, 0.0)
           val pointX = chartX + (tick.toDouble / (totalTicks - 1) * chartWidth).toInt
           val pointY = chartY + chartHeight - (percentage / 100.0 * chartHeight).toInt
+
           (pointX, pointY)
+
         points.zip(points.drop(1)).foreach:
           case ((fromX, fromY), (toX, toY)) => graphics2D.drawLine(fromX, fromY, toX, toY)
 
@@ -188,6 +239,7 @@ final class StatisticsPanel[S](using renderable: Renderable[S]) extends JPanel:
     ): Unit =
       graphics2D.setColor(Color.DARK_GRAY)
       graphics2D.setFont(graphics2D.getFont.deriveFont(Font.BOLD, StatisticsPanel.AxisFontSize))
+
       graphics2D.drawString(
         "Time",
         chartX + chartWidth / 2 - StatisticsPanel.TimeOffset,
@@ -196,8 +248,10 @@ final class StatisticsPanel[S](using renderable: Renderable[S]) extends JPanel:
 
     private def drawLegend(graphics2D: Graphics2D, startX: Int, startY: Int, groups: List[(String, Color)]): Unit =
       graphics2D.setFont(graphics2D.getFont.deriveFont(Font.PLAIN, StatisticsPanel.LegendFontSize))
+
       groups.indices.foreach: index =>
         val (label, color) = groups(index)
+
         drawLegendItem(
           graphics2D,
           color,
@@ -208,12 +262,15 @@ final class StatisticsPanel[S](using renderable: Renderable[S]) extends JPanel:
           StatisticsPanel.Padding / 2
         )
 
+  /** Panel used to display the spatial density of agents.
+    */
   private class DensityPanel extends JPanel:
 
     setPreferredSize(new Dimension(0, StatisticsPanel.DensityPanelHeight))
 
     override protected def paintComponent(graphics: Graphics): Unit =
       super.paintComponent(graphics)
+
       val graphics2D = graphics.asInstanceOf[Graphics2D]
       graphics2D.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
 
@@ -233,6 +290,7 @@ final class StatisticsPanel[S](using renderable: Renderable[S]) extends JPanel:
           val cellColor = densityColor(densityPercentage)
           val cellX = originX + column * cellWidth
           val cellY = originY + row * cellHeight
+
           graphics2D.setColor(cellColor)
           graphics2D.fillRect(cellX, cellY, cellWidth, cellHeight)
           graphics2D.setColor(Color.LIGHT_GRAY)
@@ -241,11 +299,11 @@ final class StatisticsPanel[S](using renderable: Renderable[S]) extends JPanel:
       drawDensityLegend(graphics2D, originX, originY + availableHeight + StatisticsPanel.Padding / 2)
 
     private def densityColor(densityPercentage: Double): Color = densityPercentage match
-      case p if p == 0.0  => Color.WHITE
-      case p if p <= 8.0  => Color.YELLOW
-      case p if p <= 18.0 => Color.ORANGE
-      case p if p <= 30.0 => new Color(220, 80, 0)
-      case _              => Color.RED
+      case density if density == 0.0  => Color.WHITE
+      case density if density <= 8.0  => Color.YELLOW
+      case density if density <= 18.0 => Color.ORANGE
+      case density if density <= 30.0 => new Color(220, 80, 0)
+      case _                          => Color.RED
 
     private def drawDensityLegend(graphics2D: Graphics2D, startX: Int, startY: Int): Unit =
       val legendItems = List(
@@ -255,13 +313,19 @@ final class StatisticsPanel[S](using renderable: Renderable[S]) extends JPanel:
         (new Color(220, 80, 0), "19-30%"),
         (Color.RED, "31%+")
       )
+
       graphics2D.setFont(graphics2D.getFont.deriveFont(Font.PLAIN, StatisticsPanel.AxisFontSize))
+
       val itemWidth = (getWidth - StatisticsPanel.Padding * 2) / legendItems.size
+
       legendItems.zipWithIndex.foreach:
         case ((color, label), index) =>
           drawLegendItem(graphics2D, color, label, startX + index * itemWidth, startY, StatisticsPanel.LegendBoxSize, 2)
 
+/** Contains the graphical constants used by the statistics panel.
+  */
 object StatisticsPanel:
+
   private val PanelWidth = 300
   private val Padding = 10
   private val FontSize = 13f
