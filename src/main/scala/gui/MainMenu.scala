@@ -3,11 +3,28 @@ package gui
 import java.awt.{BorderLayout, Dimension, Font, GridBagConstraints, GridBagLayout, Insets}
 import javax.swing.{BorderFactory, JButton, JFrame, JLabel, JPanel, SwingConstants, WindowConstants}
 
+/** Option available in the main menu for starting a simulation.
+  */
 trait SimulationOption:
+
+  /** Name displayed for this simulation option.
+    *
+    * @return
+    *   the option name.
+    */
   def name: String
+
+  /** Starts the simulation associated with this option.
+    *
+    * @param onBack
+    *   callback used to return to the main menu.
+    */
   def start(onBack: () => Unit): Unit
 
+/** Main menu used to select and start a simulation.
+  */
 object MainMenu:
+
   private val InitialWidth = 400
   private val InitialHeight = 350
   private val ButtonMaxWidth = 300
@@ -16,6 +33,11 @@ object MainMenu:
   private val TitlePadding = 20
   private val ButtonGap = 10
 
+  /** Opens the main menu with the specified simulation options.
+    *
+    * @param options
+    *   simulation options displayed in the menu.
+    */
   def open(options: List[SimulationOption]): Unit =
     val frame = new JFrame("ABMScala")
 
