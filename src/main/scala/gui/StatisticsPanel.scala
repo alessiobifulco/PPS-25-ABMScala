@@ -72,10 +72,10 @@ final class StatisticsPanel[S](using renderable: Renderable[S]) extends JPanel:
   add(toggleStatsButton, BorderLayout.SOUTH)
 
   /** Updates all statistics displayed by the panel using the current model.
-   *
-   * @param model
-   * current simulation model used to compute the statistics.
-   */
+    *
+    * @param model
+    *   current simulation model used to compute the statistics.
+    */
   def update(model: Model[S]): Unit =
     if !running then return
 
