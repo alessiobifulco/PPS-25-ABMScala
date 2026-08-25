@@ -8,8 +8,14 @@ import dsl.Simulation.*
 
 import java.awt.Color
 
+/** A simulation scenario modeling the spread of a pathogen through a mobile population, inspired by the classic SIR
+  * (Susceptible, Infected, Recovered) compartmental model and extended with mortality and the loss of the acquired
+  * immunity, which lets recovered individuals become susceptible again.
+  */
 object Epidemic:
 
+  /** The epidemiological state of an individual agent.
+    */
   enum Health:
     case Healthy, Infected, Recovered, Dead
 
@@ -28,6 +34,8 @@ object Epidemic:
   private val immunityLoss = 0.03
   private val decayChance = 0.02
 
+  /** The declarative blueprint of the simulation using the DSL.
+    */
   val config: SimulationConfig[Health] = Simulation.of[Health]:
     environment:
       space(RectangularSpace(width, height)) withBoundary bounce

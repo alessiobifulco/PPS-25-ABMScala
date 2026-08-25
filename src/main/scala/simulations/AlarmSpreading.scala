@@ -8,8 +8,16 @@ import dsl.Simulation.*
 
 import java.awt.Color
 
+/** A simulation scenario modeling crowd panic and information diffusion. Agents start calmly scattered in a peripheral
+  * area, while the danger zone lies at the center of the space. Whoever wanders inside it becomes alarmed, flees and
+  * shares the sighting with its neighbors, so that the alarm propagates by word of mouth to individuals that have never
+  * seen the danger themselves. Alarmed agents fade away once they reach the outskirts of the space, unless they calm
+  * down first, because the memory of the sighting has become old enough.
+  */
 object AlarmSpreading:
 
+  /** The discrete behavioral states of an individual in the crowd.
+    */
   enum Mood:
     case Calm, Alarmed, Gone
 
@@ -33,6 +41,8 @@ object AlarmSpreading:
   private def scattered(index: Int): P2d =
     P2d(start.x + (math.random() - 0.5) * startingArea, start.y + (math.random() - 0.5) * startingArea)
 
+  /** The declarative blueprint of the simulation using the DSL.
+    */
   val config: SimulationConfig[Mood] = Simulation.of[Mood]:
     environment:
       space(CircularSpace(spaceCenter, spaceRadius)) withBoundary bounce
