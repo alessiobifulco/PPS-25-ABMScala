@@ -5,23 +5,24 @@ package domain
   * the simulation engine.
   *
   * @tparam S
-  *   The generic type representing the internal state of the Agent.
+  *   The covariant type representing the internal state of the Agent. Since the only case actually carrying a state is
+  *   the spawning one, all the others belong to `Action[Nothing]` and can be emitted whatever the state type is.
   */
-enum Action[S]:
+enum Action[+S]:
 
   /** Expresses the intent to move within the environment.
     *
     * @param velocity
     *   A [[V2d]] vector representing the desired movement direction and magnitude.
     */
-  case Move(velocity: V2d) extends Action[S]
+  case Move(velocity: V2d)
 
   /** Expresses the intent to store information inside the agent's internal memory.
     *
     * @param event
     *   The [[MemoryEvent]] to be recorded.
     */
-  case Remember(event: MemoryEvent) extends Action[S]
+  case Remember(event: MemoryEvent)
 
   /** Expresses the intent to share knowledge directly with another specific agent.
     *
@@ -30,15 +31,15 @@ enum Action[S]:
     * @param event
     *   The [[MemoryEvent]] containing the information to share.
     */
-  case Tell(target: AgentId, event: MemoryEvent) extends Action[S]
+  case Tell(target: AgentId, event: MemoryEvent)
 
   /** Expresses the intent to bring a completely new agent into the simulation.
     *
     * @param state
-    *   The initial state (of type [[S]]) for the newly spawned agent.
+    *   The initial state, of type `S`, for the newly spawned agent.
     */
-  case Spawn(state: S) extends Action[S]
+  case Spawn(state: S)
 
   /** Expresses the intent to terminate the agent's lifecycle, removing it from the simulation.
     */
-  case Die() extends Action[S]
+  case Die()

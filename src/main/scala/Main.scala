@@ -5,6 +5,10 @@ import simulations.Epidemic.given
 import simulations.OpinionDynamics.given
 import simulations.AlarmSpreading.given
 
+/** The entry point of the application. It assembles the catalogue of the available scenarios, pairing the name shown to
+  * the user with the action opening the corresponding [[gui.SimulationWindow]], and hands the catalogue over to the
+  * main menu, where the choice actually happens.
+  */
 @main
 def run(): Unit =
   val options: List[SimulationOption] = List(
