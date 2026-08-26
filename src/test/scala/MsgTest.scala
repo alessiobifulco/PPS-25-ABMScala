@@ -2,10 +2,10 @@ import gui.Msg
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-class MsgTest extends AnyFlatSpec with Matchers:
+class MsgTest extends AnyFlatSpec, Matchers:
 
-  "Msg" should "have Tick case" in { Msg.Tick shouldBe Msg.Tick }
+  "Msg" should "define all expected message cases" in:
+    val messages = List(Msg.Tick, Msg.ToggleRun, Msg.RestartAndRun)
 
-  it should "have ToggleRun case" in { Msg.ToggleRun shouldBe Msg.ToggleRun }
-
-  it should "have RestartAndRun case" in { Msg.RestartAndRun shouldBe Msg.RestartAndRun }
+    messages should contain allElementsOf List(Msg.Tick, Msg.ToggleRun, Msg.RestartAndRun)
+    messages.distinct should have size 3

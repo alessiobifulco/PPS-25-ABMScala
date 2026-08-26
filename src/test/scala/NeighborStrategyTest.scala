@@ -2,7 +2,7 @@ import domain.{Agent, AgentId, NeighborStrategy, P2d, V2d}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-class NeighborStrategyTest extends AnyFlatSpec with Matchers:
+class NeighborStrategyTest extends AnyFlatSpec, Matchers:
   private val radius = 10.0
   private val agent1 = Agent(id = AgentId(1), position = P2d(20.0, 20.0), velocity = V2d.zero, state = "agent-1")
   private val agent2 = Agent(id = AgentId(2), position = P2d(25.0, 20.0), velocity = V2d.zero, state = "agent-2")
@@ -46,6 +46,20 @@ class NeighborStrategyTest extends AnyFlatSpec with Matchers:
       strategy.neighborsOf(agent1, agents, radius = -1.0)
 
   it should "find the same neighbours with the grid strategy" in:
-    val strategy = NeighborStrategy.grid[String](10.0)
-    val neighbours = strategy.neighborsOf(agent1, agents, radius)
-    neighbours.toSet shouldBe Set(agent2, agentOnRadius)
+    val gridStrategy = NeighborStrategy.grid[String](10.0)
+    val bruteForceNeighbours = strategy.neighborsOf(agent1, agents, radius)
+    val gridNeighbours = gridStrategy.neighborsOf(agent1, agents, radius)
+
+    gridNeighbours.toSet shouldBe bruteForceNeighbours.toSet
+
+  it should "reject a non-positive grid cell size" in:
+    an[IllegalArgumentException] should be thrownBy:
+      NeighborStrategy.grid[String](0.0)
+    an[IllegalArgumentException] should be thrownBy:
+      NeighborStrategy.grid[String](-1.0)
+
+  it should "reject an infinite radius" in:
+    an[IllegalArgumentException] should be thrownBy:
+      strategy.neighborsOf(agent1, agents, Double.PositiveInfinity)
+    an[IllegalArgumentException] should be thrownBy:
+      strategy.neighborsOf(agent1, agents, Double.NaN)

@@ -2,7 +2,7 @@ import domain.{CircularSpace, P2d, V2d, BoundaryPolicy, Shape}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-class CircularSpaceTest extends AnyFlatSpec with Matchers:
+class CircularSpaceTest extends AnyFlatSpec, Matchers:
 
   private val center = P2d(0.0, 0.0)
   private val radius = 10.0
@@ -71,12 +71,12 @@ class CircularSpaceTest extends AnyFlatSpec with Matchers:
     val velocity = V2d(-2.0, 1.0)
     space.stop(position, velocity) shouldBe (position, velocity)
 
-  it should "wrap a position outside the circle to the opposite side" in:
-    val position = P2d(10.0, 0.0)
+  it should "wrap an external position to the opposite side" in:
+    val position = P2d(20.0, 0.0)
     val velocity = V2d(2.0, 1.0)
     val (newPos, newVel) = BoundaryPolicy.wrap(position, velocity, space)
+    newPos shouldBe P2d(-10.0, 0.0)
     newVel shouldBe velocity
-    space.contains(newPos) shouldBe true
 
   it should "generate a random position within the circle" in:
     val pos = space.randomPosition
