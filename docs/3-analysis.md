@@ -2,7 +2,7 @@
 
 L'analisi del problema svolta nella prima fase del progetto ha permesso di
 evidenziare i requisiti elencati di seguito. Poiché il prodotto realizzato non è
-un'applicazione finale a se ma ideato come pseudo framework, l'utente a cui i requisiti fanno
+un'applicazione finale a sé ma ideato come pseudo framework, l'utente a cui i requisiti fanno
 riferimento è il **simulation developer**, ovvero chi utilizza le
 astrazioni offerte per modellare un fenomeno.
 
@@ -40,8 +40,8 @@ Entità autonoma che popola la simulazione:
 - può possedere una **memory** di ciò che ha percepito. La **memory** ha capacità
   limitata, definita alla configurazione della simulazione: i **memory record** più
   vecchi vengono dimenticati per fare spazio a quelli nuovi. Ogni **memory record** è
-  datato con il tick in cui è stato acquisito, così che una condizione possa
-  distinguere un'informazione recente da una obsoleta, e può essere acquisito
+  datato con il tick in cui è stato acquisito, così che una condizione possa distinguere 
+  le informazioni recenti da quelle obsolete, e può essere acquisito
   per **perception** diretta oppure ricevuto da un altro **agent**, il che rende
   possibile la propagazione di informazione oltre il raggio di **perception**;
 - non modifica direttamente né sé stesso né gli altri: esprime intenzioni sotto
@@ -93,8 +93,8 @@ Spazio condiviso in cui gli **agent** vivono:
   **perception**;
 - può contenere **point of interest**, regioni circolari dotate di significato
   per il modello. Un **point of interest** ha una posizione, un raggio e un nome;
-  gli **agent** percepiscono di trovarsi al suo interno e può richiedere una
-  permanenza minima prima di produrre effetto, così da distinguere
+  gli **agent** percepiscono di trovarsi al suo interno e può richiedere, secondo una soglia configurabile dall'utente,
+  una permanenza minima prima di produrre effetto, così da distinguere
   l'attraversamento occasionale dalla sosta. Non ha **behavior** proprio:
   costituisce una condizione utilizzabile dalle **interaction rule**, non un **agent**.
 

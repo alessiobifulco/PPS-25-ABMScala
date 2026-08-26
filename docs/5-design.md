@@ -17,8 +17,14 @@ Il Domain racchiude i concetti fondamentali del modello ad agenti. È completame
 ### Posizione e Spostamento
 
 La posizione è rappresentata dalla `case class` **`P2d`** e lo spostamento dalla `case class` **`V2d`**: entrambe sono arricchite tramite **extension methods** con gli operatori algebrici (`+`, `-`, `*`, `normalized`, `length`), così da rendere il codice del dominio vicino alla notazione matematica senza introdurre gerarchie di tipi.
+Lo spazio della simulazione è rappresentato dal trait `Space`, che definisce le operazioni geometriche comuni indipendentemente dalla forma concreta del mondo. Lo spazio espone il controllo di appartenenza di una posizione e le operazioni necessarie alla gestione del movimento in prossimità del confine.
+Le implementazioni fornite sono `RectangularSpace` e `CircularSpace`. Il primo rappresenta una regione rettangolare definita dalle sue dimensioni, mentre il secondo rappresenta una regione circolare definita da centro e raggio. La forma geometrica è descritta dall'enum `Shape`, utilizzato anche dalla GUI per determinare come disegnare il confine dell'ambiente.
 
-* **Scelte di design**: la distinzione tra i due tipi non è formale ma semantica. Impedisce di sommare due posizioni, operazione priva di significato, e rende la differenza tra posizioni un vettore
+* **Scelte di design**: 
+    * la distinzione tra i due tipi non è formale ma semantica. Impedisce di sommare due posizioni, operazione priva di significato, e rende la differenza tra posizioni un vettore
+    * il trait `Space` astrae la geometria dal resto del modello, così che l'Engine possa applicare le operazioni spaziali senza conoscere la forma concreta
+    * `Shape` costituisce una descrizione chiusa delle forme supportate e consente di utilizzare il pattern matching per gestire separatamente rettangoli e cerchi
+    * le operazioni geometriche restituiscono nuovi valori invece di modificare lo spazio, mantenendo l'immutabilità delle strutture del dominio.
 * **Casi degeneri**: la normalizzazione è definita per casi anziché con un confronto esplicito, restituendo il vettore nullo quando la lunghezza è nulla, e protegge da valori non definiti tutte le operazioni del DSL che ne fanno uso
 
 ### Agente e Identità
@@ -45,6 +51,21 @@ La `case class` **`AgentContext[S]`** è la fotografia locale del mondo su cui u
     * Offrire interrogazioni derivate tramite extension methods: filtro dei vicini per distanza (`visibleWithin`), raccolta delle credenze udibili dai vicini (`heardBeliefs`), verifica della presenza in un punto di interesse (`isInside`) e della permanenza prolungata al suo interno (`hasSettledIn`)
 * **Scelte di design**: l'alias `type Condition[S] = AgentContext[S] => Boolean` eleva il concetto di condizione a funzione di prima classe, rendendo possibile comporre i predicati del DSL con gli operatori `and` e `or` senza definire una gerarchia di classi dedicata
 
+### 3. Ambiente, Confini e Vicinato
+
+Il trait `Environment` aggrega lo spazio, la popolazione corrente, la politica di frontiera e i `Point of Interest`. Fornisce inoltre le operazioni necessarie alla ricerca dei vicini e alla creazione di nuove versioni dell'ambiente dopo l'aggiornamento della popolazione.
+
+La gestione del movimento al confine è delegata a `BoundaryPolicy`, un enum che distingue tre comportamenti: `bounce`, che riflette il movimento dell'agente, `stop`, che lo arresta, e `wrap`, che trasferisce l'agente sul lato opposto dello spazio quando la geometria lo consente. L'uso della politica `wrap` con uno spazio non toroidale viene gestito applicando il comportamento di rimbalzo.
+
+La ricerca dei vicini è astratta dal trait NeighborStrategy. L'implementazione bruteForce, utilizzata come strategia predefinita, confronta ogni agente con tutti gli altri, mentre la strategia grid utilizza una griglia spaziale per ridurre il numero di agenti considerati nella ricerca. La strategia viene fornita all'Engine tramite una configurazione esplicita, senza rendere dipendente il modello da uno specifico algoritmo.
+
+* **Scelte di design**:
+    * `Environment` espone il vicinato attraverso un'astrazione, separando il modello dell'ambiente dall'algoritmo di ricerca;
+    * `NeighborStrategy` costituisce un punto di estensione sostituibile, utile per adattare le prestazioni alla dimensione della popolazione;
+    * la validazione dell'ambiente verifica la compatibilità tra politica di frontiera e spazio, oltre alla posizione valida dei `Point of Interest`;
+    * gli aggiornamenti della popolazione producono un nuovo ambiente tramite `withAgents`, senza modificare quello precedente.
+
+
 ### Memoria e Credenze
 
 La memoria dell'agente è modellata dal trait **`Memory`**, che conserva una lista di **`Belief`**, ciascuno costituito da un evento e dal tick in cui è stato registrato.
@@ -57,6 +78,14 @@ La memoria dell'agente è modellata dal trait **`Memory`**, che conserva una lis
 * **Scelte di design**: la capacità limitata combinata con le condizioni temporali del DSL (`recentlySighted`, `nothingSightedIn`), consente di esprimere fenomeni come la propagazione e il progressivo esaurimento di un allarme
 
 ![Memory Diagram](img/02-memory.png)
+
+### 4. Point of Interest
+
+Il `Point of Interest` è modellato dalla case class `POI` e rappresenta una regione circolare dotata di posizione, raggio e nome. Non è un agente e non possiede un comportamento autonomo: costituisce invece un elemento dell'ambiente che può essere osservato dagli agenti e utilizzato come condizione dalle regole di interazione.
+
+La verifica di appartenenza è effettuata confrontando la distanza tra la posizione dell'agente e il centro del punto con il relativo raggio. L'Engine aggiorna a ogni tick la mappa delle permanenze, incrementando il conteggio quando l'agente rimane all'interno del POI e azzerandolo quando ne esce. La condizione `settledIn` utilizza queste informazioni per verificare se è stato raggiunto l'`activationDelay` previsto dal punto di interesse e distinguere così la sosta effettiva dal semplice attraversamento.
+
+* **Scelte di design**: il `POI` è mantenuto indipendente dalla logica degli agenti e dalla rappresentazione grafica. La sua presenza nel dominio consente al DSL di esprimere condizioni spaziali e temporali senza introdurre comportamenti specializzati nell'Engine.
 
 ### Azioni e Comportamenti
 
@@ -89,16 +118,22 @@ Il DSL è il livello con cui l'utente del framework descrive una simulazione. L'
 
 ### Struttura a Builder e Context Function
 
-La costruzione avviene tramite builder cooperanti — `SimulationBuilder`, `BehaviorsBuilder` e `RulesBuilder` — attivati dai blocchi `behavior` e `rules`, ai quali si affianca l'`EnvironmentBuilder` per la parte di ambiente.
+La costruzione avviene tramite builder cooperanti — `SimulationBuilder`, `BehaviorsBuilder` e `RulesBuilder` — attivati dai blocchi `behavior` e `rules`, ai quali si affianca l'`EnvironmentBuilder`, è il componente del DSL responsabile della configurazione dell'ambiente 
+e della popolazione iniziale. Il builder raccoglie le impostazioni durante l'esecuzione del blocco `environment` e le materializza, tramite `build()`, in un `EnvironmentSpec` completo.
 
 * **Responsabilità**:
     * `BehaviorsBuilder` e `RulesBuilder`: accumulare rispettivamente i comportamenti e le regole dichiarati all'interno del proprio blocco
     * `SimulationBuilder`: aggregare le tre parti e materializzarle nella `SimulationConfig` finale, istanziando la popolazione iniziale a partire dalle funzioni generatrici
+    * `EnvironmentBuilder`: configurare lo spazio e la relativa politica di frontiera; definire il raggio di percezione degli agenti; specificare la numerosità della popolazione e la funzione che determina lo stato di ciascun agente;
+      specificare la funzione che determina la posizione iniziale degli agenti; impostare la capacità opzionale della memoria; raccogliere i `Point of Interest` presenti nell'ambiente.
 * **Meccanismo**: ogni blocco è una **context function** (`Builder[S] ?=> Unit`). Il builder viene creato dal blocco stesso e reso disponibile come parametro `using` a tutte le costruzioni annidate, che possono quindi registrarsi senza mai essere nominate esplicitamente dall'utente. È questo il meccanismo che consente di scrivere `Dead whenAgentIs Infected iff chanceOf(mortalityChance)` come istruzione autonoma
+  le operazioni esposte dall'object `EnvironmentBuilder` utilizzano il builder implicito associato al blocco `environment`. Le configurazioni intermedie, come `SpaceConfig` e `PopulationConfig`, permettono di concatenare le impostazioni mantenendo la sintassi del DSL leggibile.
 * **Scelte di design**:
     * Lo stato mutabile è **confinato** nelle implementazioni private dei builder e non sopravvive alla costruzione: l'esito è una `SimulationConfig` immutabile
     * `BehaviorsBuilder` ordina i comportamenti raccolti in modo che quello di default risulti sempre ultimo, rendendo l'esito indipendente dall'ordine in cui l'utente li ha scritti
     * Le configurazioni incomplete o incoerenti sono intercettate in fase di costruzione tramite precondizioni e messaggi espliciti
+    * In `EnvironmentBuilder` lo stato mutabile è confinato nell'implementazione privata del builder. Il client non costruisce direttamente l'ambiente, ma definisce le funzioni necessarie alla sua inizializzazione; il metodo build() verifica la presenza dello spazio e della popolazione e controlla che la numerosità sia positiva. Il risultato è un EnvironmentSpec, successivamente trasformato dal SimulationBuilder nell'ambiente e nella popolazione iniziali, mentre le ulteriori validazioni sull'ambiente vengono applicate durante la sua costruzione.
+
 
 ![DSL Builders Diagram](img/04-dsl-builders.png)
 
@@ -192,6 +227,26 @@ L'Engine è l'unico interprete del vocabolario definito da `Action`.
 * **`Tell`**: il messaggio è raccolto e recapitato nella fase di comunicazione, in modo che un agente possa ricevere informazioni anche da agenti elaborati dopo di lui nello stesso tick
 * **`Spawn`**: genera nuovi agenti nella posizione del genitore, con identificatori progressivi e direzione iniziale casuale
 * **`Die`**: la presenza dell'azione esclude l'agente dalla popolazione del tick successivo; poiché la verifica precede l'applicazione delle altre azioni, la morte prevale su qualunque altro effetto dichiarato nello stesso tick
+
+### 5. GUI
+
+La GUI costituisce il livello responsabile dell'osservazione e del controllo delle simulazioni. Essa è realizzata con Swing e mantiene separata la rappresentazione grafica dalla logica di aggiornamento del modello.
+
+Il `MainMenu` rappresenta il punto di ingresso dell'applicazione e presenta le simulazioni disponibili attraverso oggetti `SimulationOption`. La selezione di un'opzione nasconde il menu e apre la finestra della simulazione; alla chiusura della finestra, una callback permette di tornare al menu principale.
+
+La `SimulationWindow` coordina i componenti Swing e il ciclo di aggiornamento. Contiene i pulsanti per tornare al menu, interrompere o riprendere l'esecuzione e riavviare la simulazione. Un timer genera periodicamente il messaggio `Tick`, che viene inviato al componente MVU. La finestra aggiorna quindi il modello e ridisegna i pannelli a partire dal nuovo valore prodotto.
+
+Il `SimulationPanel` visualizza la scena simulata. Disegna il confine dello spazio in forma rettangolare o circolare, i `Point of Interest` e gli agenti presenti nell'ambiente. Il colore degli agenti viene determinato dalla type class `Renderable[S]`, mentre il colore dei punti di interesse viene determinato da `POIRenderable`. In questo modo la libreria non deve conoscere il significato concreto degli stati della simulazione.
+
+Il StatisticsPanel affianca alla scena una rappresentazione quantitativa dell'evoluzione. Visualizza il tick corrente, la numerosità della popolazione, il numero complessivo di transizioni di stato e il numero di agenti presenti nei diversi `Point of Interest`. Mantiene inoltre lo storico della distribuzione percentuale degli stati e una griglia che rappresenta la densità spaziale degli agenti. Un controllo indipendente consente di sospendere o riattivare l'aggiornamento delle statistiche.
+
+### 6. Implementazione del pattern MVU nella GUI
+
+L'implementazione del pattern Model-View-Update è distribuita tra `Model`, `Msg`, `Mvu`, `State` e i componenti Swing. `Model` è una struttura dati immutabile che contiene la configurazione, lo stato corrente della simulazione e l'indicazione se l'esecuzione è attiva.
+
+L'enum `Msg` rappresenta gli eventi gestiti dalla GUI: avanzamento di un tick, cambio dello stato di esecuzione e riavvio della simulazione. `Mvu.update` traduce ciascun messaggio in una trasformazione `State[Model[S], Unit]`. La trasformazione viene applicata dalla `SimulationWindow`, che sostituisce il modello corrente e aggiorna la rappresentazione dei pannelli.
+
+La case class `State` rappresenta una computazione che riceve uno stato e restituisce lo stato aggiornato insieme a un valore risultato. La type class `Monad` fornisce le operazioni `unit`, `map` e `flatMap`, permettendo di comporre trasformazioni successive senza gestire esplicitamente il passaggio del modello.
 
 ## Simulazioni di Esempio
 
