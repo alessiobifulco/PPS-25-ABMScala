@@ -1,5 +1,5 @@
 ---
-title: Design di Dettaglio
+title: Design di dettaglio
 nav_order: 5
 parent: Report
 ---
@@ -8,37 +8,18 @@ parent: Report
 
 ## Panoramica
 
-In questa sezione viene approfondito il design delle componenti chiave del progetto, illustrando le principali responsabilità funzionali, le scelte implementative e le interazioni tra i moduli. L'analisi segue la suddivisione in quattro livelli introdotta nel design architetturale: il **Domain**, che modella i concetti di agente, spazio e regola; il **DSL**, che espone la sintassi dichiarativa con cui l'utente descrive una simulazione; l'**Engine**, che esegue il ciclo di aggiornamento; e la **GUI**, che visualizza lo stato secondo il pattern **Model-View-Update (MVU)**.
-
-Trasversalmente a tutti i livelli valgono due scelte di fondo: l'**immutabilità** delle strutture dati di dominio, per cui ogni passo di simulazione produce un nuovo stato senza modificare il precedente, e la **parametricità sullo stato dell'agente** (`S`), che rende il framework indipendente dal dominio applicativo concreto. L'unico stato mutabile presente è confinato nei builder del DSL e nei componenti Swing, dove serve rispettivamente ad accumulare la configurazione e a interfacciarsi con una libreria imperativa.
+In questa sezione viene approfondito il design delle componenti chiave del progetto, illustrando le principali responsabilità funzionali, le scelte implementative e le interazioni tra i moduli. L'analisi segue la suddivisione in livelli introdotta nel design architetturale: il **Domain**, che modella i concetti di agente, azione e regola; il **DSL**, che espone la sintassi dichiarativa con cui l'utente descrive una simulazione; e l'**Engine**, che esegue il ciclo di aggiornamento.
 
 ## Domain
 
-Il Domain racchiude i concetti fondamentali del modello ad agenti. È completamente disaccoppiato dal DSL, dall'Engine e dalla GUI: definisce *cosa* sono un agente, uno spazio, un comportamento e una regola, senza sapere come vengano costruiti né come vengano eseguiti.
+Il Domain racchiude i concetti fondamentali del modello ad agenti. È completamente disaccoppiato dal DSL, dall'Engine e dalla GUI: definisce *cosa* sono un agente, un comportamento e una regola, senza sapere come vengano costruiti né come vengano eseguiti.
 
-### Rappresentazione dello Spazio
+### Posizione e Spostamento
 
-Lo spazio della simulazione è descritto dal trait **`Space`**, che astrae la geometria del mondo e la gestione dei confini.
+La posizione è rappresentata dalla `case class` **`P2d`** e lo spostamento dalla `case class` **`V2d`**: entrambe sono arricchite tramite **extension methods** con gli operatori algebrici (`+`, `-`, `*`, `normalized`, `length`), così da rendere il codice del dominio vicino alla notazione matematica senza introdurre gerarchie di tipi.
 
-* **Responsabilità**:
-    * Verificare l'appartenenza di una posizione al mondo (`contains`) e riportarla al suo interno (`clamp`)
-    * Definire come una coppia posizione/velocità viene corretta al contatto con il bordo, secondo due modalità alternative: rimbalzo (`bounce`) e arresto (`stop`)
-    * Generare posizioni casuali per il popolamento iniziale (`randomPosition`)
-    * Esporre la propria geometria come valore (`shape`), disaccoppiando la rappresentazione grafica dai dettagli implementativi
-* **Implementazioni**:
-    * `RectangularSpace`: mondo rettangolare definito da larghezza e altezza, con origine nell'angolo superiore sinistro
-    * `CircularSpace`: mondo circolare definito da centro e raggio, in cui il rimbalzo è calcolato per riflessione della velocità rispetto alla normale radiale
-* **Scelte di design**: la toroidalità non è una proprietà di ogni spazio, ma un trait separato **`Toroidal`** che aggiunge l'operazione `wrap`. In questo modo la possibilità di attraversare i bordi è espressa a livello di tipo e non come metodo opzionale, e uno spazio non toroidale non può essere usato con una politica di attraversamento
-
-La geometria concreta è modellata dall'`enum` **`Shape`**, i cui casi `Rectangle` e `Circle` trasportano i parametri necessari al rendering. La posizione è rappresentata dalla `case class` **`P2d`** e lo spostamento dalla `case class` **`V2d`**: entrambe sono arricchite tramite **extension methods** con gli operatori algebrici (`+`, `-`, `*`, `normalized`, `length`), così da rendere il codice del dominio vicino alla notazione matematica senza introdurre gerarchie di tipi.
-
-### Politiche di Frontiera
-
-L'`enum` **`BoundaryPolicy`** rende esplicita la strategia di gestione dei confini, con i tre casi `bounce`, `stop` e `wrap`.
-
-* **Responsabilità**: dato uno stato di moto e uno spazio, restituire la coppia posizione/velocità corretta
-* **Logica**: l'enum non contiene la matematica della correzione, ma la delega allo `Space` selezionando l'operazione appropriata. Il caso `wrap` verifica tramite pattern matching che lo spazio sia `Toroidal` e, in caso contrario, degrada al rimbalzo; un controllo equivalente è anticipato alla costruzione dell'`Environment` sotto forma di precondizione, così che l'incoerenza venga segnalata alla configurazione e non durante l'esecuzione
-* **Scelte di design**: modellare la politica come enum con un metodo `apply` permette di trattarla come un valore configurabile e, al tempo stesso, di esporla nel DSL come semplice parola chiave (`withBoundary bounce`)
+* **Scelte di design**: la distinzione tra i due tipi non è formale ma semantica. Impedisce di sommare due posizioni, operazione priva di significato, e rende la differenza tra posizioni un vettore
+* **Casi degeneri**: la normalizzazione è definita per casi anziché con un confronto esplicito, restituendo il vettore nullo quando la lunghezza è nulla, e protegge da valori non definiti tutte le operazioni del DSL che ne fanno uso
 
 ### Agente e Identità
 
@@ -53,10 +34,11 @@ Il trait **`Agent[S]`** rappresenta la singola entità simulata ed è definito c
     * L'identificatore è un **opaque type** `AgentId` su `Int`: garantisce type-safety a costo zero a runtime, impedendo di confondere un identificatore con un qualunque intero
     * La memoria è `Option[Memory]` perché è una capacità opzionale: le simulazioni che non ne hanno bisogno non pagano né in spazio né in complessità
 
+![Agent Diagram](img/01-agent.png)
 
 ### Contesto di Percezione
 
-La `case class` **`AgentContext[S]`** è la fotografia locale del mondo su cui un agente decide: l'agente in esame, i suoi vicini, il tick corrente e la sua permanenza nei punti di interesse.
+La `case class` **`AgentContext[S]`** è la fotografia locale del mondo su cui un agente decide: l'agente in esame, i suoi vicini, il tick corrente e la sua permanenza nei punti di interesse, l'idea di fondo è che gli agenti prendano delle decisioni valutando solo il loro contesto locale e da esse scaturisca un pattern soprastante dato dal interazione con tutti gli altri agenti.
 
 * **Responsabilità**:
     * Costituire l'unico canale attraverso cui comportamenti e regole accedono al mondo, garantendo che la decisione sia una funzione della sola informazione locale
@@ -72,7 +54,9 @@ La memoria dell'agente è modellata dal trait **`Memory`**, che conserva una lis
     * Applicare un limite di capacità, mantenendo solo le credenze più recenti
     * Esporre interrogazioni di uso comune: l'ultima credenza (`latest`) e le sole osservazioni di punti di interesse (`sightings`)
 * **Tipi di evento**: l'`enum` **`MemoryEvent`** distingue l'osservazione diretta (`Sighting`, che trasporta identificatore e posizione del punto di interesse) dall'incontro con un altro agente (`Encounter`), lasciando la struttura aperta a ulteriori casi
-* **Scelte di design**: la capacità limitata è ciò che rende la memoria un modello di *oblio* e non un semplice registro. Combinata con le condizioni temporali del DSL (`recentlySighted`, `nothingSightedIn`), consente di esprimere fenomeni come la propagazione e il progressivo esaurimento di un allarme
+* **Scelte di design**: la capacità limitata combinata con le condizioni temporali del DSL (`recentlySighted`, `nothingSightedIn`), consente di esprimere fenomeni come la propagazione e il progressivo esaurimento di un allarme
+
+![Memory Diagram](img/02-memory.png)
 
 ### Azioni e Comportamenti
 
@@ -97,21 +81,7 @@ Il trait **`InteractionRule[S]`** governa l'evoluzione dello stato di dominio, s
     * Calcolare il nuovo stato dell'agente a partire dal contesto (`newState`)
 * **Scelte di design**: la distinzione tra `Behavior` e `InteractionRule` riflette la distinzione tra *come un agente agisce* e *come un agente cambia*. Un agente infetto si muove più velocemente perché lo dice un comportamento, ma guarisce perché lo dice una regola; le due dimensioni possono essere modificate indipendentemente
 
-
-### Strategie di Vicinato
-
-Il trait **`NeighborStrategy[S]`** astrae il calcolo dei vicini, che è l'operazione più onerosa dell'intera simulazione.
-
-* **Responsabilità**:
-    * Restituire, dato l'insieme degli agenti e un raggio, una **funzione** che associa a ciascun agente i propri vicini (`prepare`)
-    * Offrire l'interrogazione puntuale (`neighborsOf`) come caso particolare della precedente
-* **Implementazioni**:
-    * `BruteForceStrategy`: confronto di ogni agente con tutti gli altri, adeguato a popolazioni contenute
-    * `GridStrategy`: indicizzazione spaziale su celle di lato configurabile, con esame delle sole celle che intersecano il raggio di percezione
-* **Scelte di design**:
-    * La firma di `prepare` è la scelta centrale: separando la fase di preparazione da quella di interrogazione, l'indice spaziale viene costruito **una sola volta per tick** e non una volta per agente
-    * Il confronto tra distanze avviene sui quadrati, evitando il calcolo della radice quadrata
-    * Una **given instance** di default rende la strategia un parametro implicito: la simulazione funziona senza che l'utente debba occuparsene, ma resta possibile sostituirla
+![Context, Action and Behavior Diagram](img/03-context-action-behavior.png)
 
 ## DSL
 
@@ -119,19 +89,18 @@ Il DSL è il livello con cui l'utente del framework descrive una simulazione. L'
 
 ### Struttura a Builder e Context Function
 
-La costruzione avviene tramite quattro builder cooperanti — `SimulationBuilder`, `EnvironmentBuilder`, `BehaviorsBuilder` e `RulesBuilder` — attivati dai blocchi `environment`, `behavior` e `rules`.
+La costruzione avviene tramite builder cooperanti — `SimulationBuilder`, `BehaviorsBuilder` e `RulesBuilder` — attivati dai blocchi `behavior` e `rules`, ai quali si affianca l'`EnvironmentBuilder` per la parte di ambiente.
 
 * **Responsabilità**:
-    * `EnvironmentBuilder`: raccogliere spazio, politica di frontiera, raggio di percezione, dimensione e stato iniziale della popolazione, criterio di posizionamento, capacità di memoria e punti di interesse, validandoli e producendo un `EnvironmentSpec`
     * `BehaviorsBuilder` e `RulesBuilder`: accumulare rispettivamente i comportamenti e le regole dichiarati all'interno del proprio blocco
     * `SimulationBuilder`: aggregare le tre parti e materializzarle nella `SimulationConfig` finale, istanziando la popolazione iniziale a partire dalle funzioni generatrici
-* **Meccanismo**: ogni blocco è una **context function** (`Builder[S] ?=> Unit`). Il builder viene creato dal blocco stesso e reso disponibile come parametro `using` a tutte le costruzioni annidate, che possono quindi registrarsi senza mai essere nominate esplicitamente dall'utente. È questo il meccanismo che consente di scrivere `population(250) of Healthy withOne Infected` come istruzione autonoma
+* **Meccanismo**: ogni blocco è una **context function** (`Builder[S] ?=> Unit`). Il builder viene creato dal blocco stesso e reso disponibile come parametro `using` a tutte le costruzioni annidate, che possono quindi registrarsi senza mai essere nominate esplicitamente dall'utente. È questo il meccanismo che consente di scrivere `Dead whenAgentIs Infected iff chanceOf(mortalityChance)` come istruzione autonoma
 * **Scelte di design**:
     * Lo stato mutabile è **confinato** nelle implementazioni private dei builder e non sopravvive alla costruzione: l'esito è una `SimulationConfig` immutabile
-    * Le classi di configurazione intermedie (`SpaceConfig`, `PopulationConfig`) esistono per rendere possibile l'incatenamento dei modificatori `infix`, mantenendo l'ordine di lettura naturale
     * `BehaviorsBuilder` ordina i comportamenti raccolti in modo che quello di default risulti sempre ultimo, rendendo l'esito indipendente dall'ordine in cui l'utente li ha scritti
     * Le configurazioni incomplete o incoerenti sono intercettate in fase di costruzione tramite precondizioni e messaggi espliciti
 
+![DSL Builders Diagram](img/04-dsl-builders.png)
 
 ### Comportamenti Condizionali
 
@@ -146,6 +115,8 @@ L'object **`ConditionalBehavior`** introduce il tipo `ActionSource[S]`, alias pe
     * `whenAgentIs`: registra la sorgente come comportamento associato a uno stato, mentre `asDefault` la registra come comportamento generale
 * **Scelte di design**: modellare la sorgente di azioni come semplice alias di funzione, anziché come trait, rende gratuita la composizione e consente all'utente di definire sorgenti personalizzate come normali funzioni, ottenendo automaticamente tutti i combinatori
 
+![Conditional Behavior Diagram](img/05-conditional-behavior.png)
+
 ### Comportamenti Compositi
 
 L'object **`CompositeBehavior`** implementa il comportamento di stormo, in cui la direzione di un agente nasce dalla somma pesata di più contributi.
@@ -156,6 +127,8 @@ L'object **`CompositeBehavior`** implementa il comportamento di stormo, in cui l
     * L'appartenenza allo stormo non è determinata dall'identità di stato ma da un **predicato binario** sugli stati, il che permette di formare gruppi per similarità e non solo per uguaglianza
     * `FlockConfig` estende `ActionSource`, quindi lo stormo è una sorgente di azioni come tutte le altre e può essere combinato con i medesimi operatori
     * Una funzione ausiliaria di normalizzazione con fallback protegge dai vettori nulli, evitando che un agente privo di stimoli resti immobile
+
+![Composite Behavior Diagram](img/06-composite-behavior.png)
 
 ### Regole Discrete
 
@@ -174,6 +147,8 @@ L'object **`ContinuousRules`** affronta il caso in cui lo stato non sia un insie
 * **Regola fornita**: `convergeTowardsAverage` sposta il valore dell'agente verso la media dei vicini influenti, con parametri per il raggio di influenza, il criterio di affinità e il tasso di convergenza, tutti dotati di valori di default
 * **Scelte di design**: l'uso di una type class anziché di un vincolo di ereditarietà mantiene il tipo di stato dell'utente completamente libero: `Opinion` resta una normale `case class`, e l'adattamento al framework è esterno e non invasivo
 
+![Rules DSL Diagram](img/07-rules-dsl.png)
+
 ### Probabilità e Facciata
 
 L'**opaque type `Chance`** incapsula una probabilità, validandone l'appartenenza all'intervallo unitario alla costruzione ed esponendo l'estrazione tramite `happens`. Il tipo opaco impedisce di passare un `Double` qualsiasi dove è attesa una probabilità.
@@ -186,9 +161,11 @@ L'Engine è il livello che trasforma una configurazione dichiarativa in un'evolu
 
 ### Stato e Configurazione
 
-* **`SimulationConfig[S]`**: aggrega ambiente iniziale, comportamenti, raggio di percezione, regole e strategia di vicinato. È il prodotto del DSL e l'input dell'Engine
+* **`SimulationConfig[S]`**: aggrega ambiente iniziale, comportamenti, raggio di percezione, regole e strategia di vicinato. È il prodotto del DSL e l'input dell'Engine, che la riceve come valore immutabile senza conoscerne il processo di costruzione
 * **`SimulationState[S]`**: contiene l'ambiente corrente, il tick, il prossimo identificatore disponibile e la mappa delle permanenze nei punti di interesse, esponendo l'accesso sicuro a queste ultime tramite `residencyOf`
 * **Scelte di design**: separare configurazione e stato distingue ciò che è fisso per l'intera simulazione da ciò che evolve, e rende il riavvio un'operazione elementare, ottenuta rigenerando lo stato dalla configurazione immutata
+
+![Engine Diagram](img/08-engine.png)
 
 ### Pipeline del Tick
 
@@ -204,6 +181,7 @@ Il metodo `tick` è il cuore del sistema e organizza l'aggiornamento in fasi suc
     * Le fasi sono nettamente separate: tutti gli agenti percepiscono lo stato del tick precedente prima che qualunque aggiornamento sia applicato, evitando che l'ordine di elaborazione influenzi il risultato
     * L'intero tick è una funzione pura da stato a stato, il che rende la simulazione riproducibile e collaudabile senza alcuna infrastruttura di supporto
 
+![Simulation Tick Diagram](img/09-engine-tick-sequence.png)
 
 ### Interpretazione delle Azioni
 
@@ -215,41 +193,6 @@ L'Engine è l'unico interprete del vocabolario definito da `Action`.
 * **`Spawn`**: genera nuovi agenti nella posizione del genitore, con identificatori progressivi e direzione iniziale casuale
 * **`Die`**: la presenza dell'azione esclude l'agente dalla popolazione del tick successivo; poiché la verifica precede l'applicazione delle altre azioni, la morte prevale su qualunque altro effetto dichiarato nello stesso tick
 
-## GUI
-
-La GUI è realizzata in **Swing** e organizzata secondo il pattern **Model-View-Update**, che ne mantiene la logica funzionale nonostante la natura imperativa della libreria grafica sottostante.
-
-### Ciclo Model-View-Update
-
-* **`Model[S]`**: aggrega lo stato della simulazione, la configurazione e il flag di esecuzione; è costruito a partire dalla sola `SimulationConfig`
-* **`Msg`**: `enum` che elenca gli eventi possibili — avanzamento (`Tick`), avvio/arresto (`ToggleRun`) e riavvio (`RestartAndRun`)
-* **`Mvu`**: definisce la funzione di aggiornamento come pattern matching sul messaggio, restituendo per ciascuno la corrispondente trasformazione del modello. L'avanzamento è ignorato quando la simulazione è in pausa, e il riavvio è ottenuto **componendo** le trasformazioni elementari di reinizializzazione e ripresa
-* **Scelte di design**: la trasformazione è espressa come **monade di stato** `State[Model[S], Unit]`, con il trait `Monad` e la given instance `stateMonad` definiti nel modulo. Questo permette di comporre più aggiornamenti tramite `flatMap` mantenendo il passaggio del modello implicito, e mantiene la logica dell'interfaccia pura e verificabile indipendentemente da Swing
-
-
-### Finestra di Simulazione
-
-L'object **`SimulationWindow`** costruisce l'interfaccia di una singola simulazione e realizza il collegamento con il ciclo MVU.
-
-* **Responsabilità**:
-    * Comporre il pannello di rendering, quello statistico e la barra dei comandi
-    * Dimensionare l'area di disegno a partire dalla `Shape` dello spazio, adattandosi automaticamente a mondi rettangolari e circolari
-    * Generare l'avanzamento temporale mediante un `Timer` a intervallo fisso, che si limita a inviare un messaggio di avanzamento
-    * Instradare ogni interazione dell'utente in un messaggio, applicare l'aggiornamento e ridisegnare
-    * Gestire il ritorno al menu, arrestando il timer e liberando la finestra
-* **Scelte di design**: la funzione di dispatch è l'**unico** punto in cui il modello viene riassegnato. Tutti i controlli producono messaggi e nessuno modifica direttamente lo stato, per cui il flusso resta unidirezionale anche in un contesto a callback
-
-### Rendering e Statistiche
-
-* **`SimulationPanel`**: disegna il contorno dello spazio, i punti di interesse e gli agenti, centrando il mondo nell'area disponibile mediante una traslazione del contesto grafico. Non conserva alcuno stato proprio se non l'ultimo modello ricevuto, e ridisegna interamente la scena a ogni aggiornamento
-* **`StatisticsPanel`**: affianca alla visualizzazione l'andamento quantitativo della simulazione, mostrando tick, numero di agenti, numero di transizioni di stato e punti di interesse, insieme al grafico storico della composizione della popolazione e alla mappa di densità spaziale. Mantiene la storia delle composizioni e le etichette precedenti dei singoli agenti, necessarie a rilevare le transizioni, e permette di sospendere la raccolta indipendentemente dalla simulazione
-* **`Renderable[S]` e `POIRenderable`**: **type class** che definiscono l'aspetto di uno stato e di un punto di interesse. Il colore è obbligatorio, mentre l'etichetta usata dalle statistiche ha un'implementazione di default basata sulla rappresentazione testuale dello stato. `POIRenderable` fornisce inoltre una given instance di default, così che i punti di interesse siano visualizzabili senza alcuna configurazione
-* **Scelte di design**: l'uso di type class per la presentazione è il complemento della parametricità sul tipo di stato. Il framework non conosce i colori di alcun dominio applicativo; è la simulazione a dichiararli, e il compilatore a verificare che tale dichiarazione esista
-
-### Menu Principale
-
-L'object **`MainMenu`** presenta l'elenco delle simulazioni disponibili. Ciascuna voce è descritta dal trait **`SimulationOption`**, che espone un nome e la procedura di avvio, la quale riceve la funzione di ritorno al menu. In questo modo il menu non conosce né le configurazioni né i tipi di stato delle simulazioni che elenca, e l'aggiunta di una nuova simulazione non richiede alcuna modifica al codice esistente.
-
 ## Simulazioni di Esempio
 
 Le quattro simulazioni incluse non sono soltanto dimostrazioni, ma il principale strumento di validazione dell'espressività del DSL: ciascuna è stata scelta per esercitare una diversa combinazione di funzionalità.
@@ -259,3 +202,4 @@ Le quattro simulazioni incluse non sono soltanto dimostrazioni, ma il principale
 * **Ant Colony**: esercita i punti di interesse con ritardo di attivazione, la memoria con capacità limitata, la comunicazione tra agenti e la composizione di sorgenti di azioni con fallback, in cui la ricerca casuale interviene solo in assenza di ricordi utili
 * **Alarm Spreading**: esercita la propagazione dell'informazione e il suo esaurimento, combinando le condizioni temporali sulla memoria, il posizionamento iniziale personalizzato e la fuga da un punto di interesse
 
+![Simulations Diagram](img/10-simulations.png)

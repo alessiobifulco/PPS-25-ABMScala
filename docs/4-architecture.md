@@ -1,175 +1,160 @@
-# Design Architetturale
+---
+title: Design architetturale
+nav_order: 4
+parent: Report
+---
 
-Il design architetturale del sistema è stato elaborato a partire dai requisiti
-funzionali e non funzionali identificati nel capitolo precedente. L'obiettivo
-principale è stato ottenere una struttura in cui la **specifica** di una
-simulazione e la sua **esecuzione** siano concetti separati, e in cui il nucleo
-del framework non contenga alcuna conoscenza dei domini simulati.
+# Design architetturale
 
-## Separazione fra specifica ed esecuzione
+Il design architetturale del sistema è stato elaborato a partire dai requisiti funzionali e non funzionali
+identificati. L'obiettivo principale è stato creare una struttura modulare, estensibile e riusabile che permettesse di
+descrivere in modo dichiarativo una simulazione ad agenti, garantendo una chiara separazione tra il modello del
+dominio, il linguaggio con cui l'utente lo descrive, il motore che lo esegue e l'interfaccia che lo visualizza.
 
-La scelta architetturale che caratterizza il progetto è la distinzione fra ciò
-che descrive un modello e ciò che lo fa avanzare nel tempo.
+## Architettura a livelli
 
-Un `Behavior` e una `InteractionRule` sono **dati**: espongono il criterio con
-cui si applicano — lo stato dell'agente a cui rispondono e, per le regole, la
-condizione che deve valere — e la trasformazione da compiere quando quel criterio
-è soddisfatto. Non contengono alcuna nozione di quando verranno valutati né di
-come le loro conseguenze verranno propagate.
+Il sistema non è un'applicazione monolitica ma una **libreria** corredata da alcune applicazioni di esempio. Questa
+natura ha suggerito un'architettura a livelli, in cui ogni livello dipende solo da quelli sottostanti e nessuna
+dipendenza risale la gerarchia. I livelli individuati sono quattro:
 
-Allo stesso modo, un'`Action` prodotta da un `Behavior` è un dato inerte:
-descrive che l'agente *intende* muoversi, ricordare, generare un nuovo agente o
-sparire, ma non lo realizza. La sua applicazione compete all'`Engine`.
+* **Domain**: rappresenta il nucleo concettuale del sistema. Contiene le astrazioni del modello ad agenti — l'agente,
+  lo spazio, l'ambiente, il contesto di percezione, le azioni, i comportamenti e le regole di interazione — sotto
+  forma di strutture dati immutabili e di trait privi di logica applicativa. È completamente disaccoppiato dagli altri
+  livelli: non conosce né il DSL che lo costruisce, né il motore che lo esegue, né l'interfaccia che lo visualizza
 
-Ne consegue che l'intero modello è un valore immutabile e ispezionabile, e che
-l'unico componente che conosce l'ordine delle operazioni, l'avanzamento del
-tempo e la costruzione della popolazione successiva è il motore. Questa
-separazione porta tre benefici diretti sui requisiti non funzionali:
+* **DSL**: è il linguaggio dichiarativo con cui l'utente descrive una simulazione. Il suo compito è tradurre una
+  descrizione leggibile in istanze delle astrazioni del Domain, senza aggiungere alcuna semantica di esecuzione.
+  Comprende i builder, il vocabolario di sorgenti di azioni e condizioni, e la facciata `Simulation` che ne unifica
+  l'accesso
 
-- **testabilità**: `Behavior` e `InteractionRule` sono funzioni pure della
-  percezione locale e si verificano senza avviare una simulazione;
-- **determinismo**: tutti gli agenti osservano lo stesso istante e nessuno
-  osserva le conseguenze delle scelte altrui prima del tick successivo;
-- **genericità**: il motore manipola il tipo di stato `S` senza mai
-  interrogarlo, quindi non contiene conoscenza di dominio.
+* **Engine**: è il motore di esecuzione. Riceve una configurazione immutabile prodotta dal DSL e la fa evolvere nel
+  tempo, interpretando le azioni dichiarate dagli agenti e producendo a ogni passo un nuovo stato. È l'unico punto del
+  sistema in cui un'intenzione diventa una modifica dello stato
 
-## Struttura del progetto
+* **GUI**: è l'interfaccia grafica, realizzata con Swing e organizzata secondo il pattern Model-View-Update. Osserva lo
+  stato prodotto dall'Engine e lo rende visibile, senza contenere alcuna logica di simulazione
 
-Il progetto è organizzato in cinque moduli, con dipendenze rigorosamente
-orientate verso il basso: nessun modulo conosce quelli che lo utilizzano.
+A questi si affianca il modulo **simulations**, che non fa parte della libreria ma ne è il primo cliente: contiene le
+quattro simulazioni di esempio, scritte esclusivamente attraverso il namespace pubblico esportato dal DSL.
 
-```mermaid
-graph TD
-    Simulations --> DSL
-    GUI --> Engine
-    DSL --> Engine
-    DSL --> Domain
-    Engine --> Domain
-```
+La motivazione principale di questa suddivisione è la **riusabilità**. Poiché il Domain non dipende da nulla, può
+essere usato senza il DSL; poiché l'Engine dipende dal solo Domain, una simulazione può essere eseguita senza alcuna
+interfaccia grafica, come avviene nei test; e poiché la GUI riceve lo stato come dato, sostituirla con una diversa
+tecnologia di rendering non richiede alcuna modifica ai livelli sottostanti.
 
-### Domain
+## Pattern Model-View-Update per l'interfaccia
 
-Contiene le astrazioni fondamentali del framework e non dipende da nulla:
-`Agent`, `Behavior`, `InteractionRule`, `Environment`, insieme ai concetti che
-li supportano — `Action`, `AgentContext`, `Memory`, `POI`, `Space` e le
-primitive geometriche `P2d` e `V2d`.
+Per l'interfaccia grafica è stato adottato il pattern **Model-View-Update (MVU)**, i suoi tre elementi sono:
 
-È il vocabolario del sistema: definisce che cosa esiste in una simulazione
-agent-based, senza stabilire come venga costruita né come venga eseguita.
-Essendo privo di dipendenze, è anche il modulo che resta stabile quando gli
-altri cambiano.
+* **Model**: una struttura dati immutabile che descrive per intero ciò che l'interfaccia deve conoscere, ovvero lo
+  stato della simulazione, la configurazione da cui è stata generata e l'indicazione se sia in esecuzione o in pausa
 
-### Engine
+* **View**: la funzione che, dato il Model, produce la rappresentazione visiva. Nel nostro caso è realizzata dai
+  pannelli Swing, che ridisegnano interamente la scena a partire dall'ultimo Model ricevuto e non conservano alcuno
+  stato proprio
 
-Contiene il motore di esecuzione e la rappresentazione dello stato di una
-simulazione in corso: `SimulationEngine`, `SimulationState` e
-`SimulationConfig`.
+* **Update**: la funzione che, dato un messaggio, produce la trasformazione del Model. Ogni interazione dell'utente e
+  ogni scadenza del timer sono tradotte in un valore dell'`enum` `Msg`, e l'aggiornamento è espresso come **monade di
+  stato**, così che più trasformazioni possano essere composte mantenendo implicito il passaggio del modello
 
-L'`Engine` è l'unico componente che conosce l'ordine delle operazioni di un
-tick. Riceve una configurazione immutabile — ambiente iniziale, comportamenti,
-regole, raggio di percezione — e produce, dato uno stato, lo stato successivo.
-Non espone alcuna interfaccia di configurazione: la costruzione di una
-`SimulationConfig` è compito del modulo `DSL`.
+La scelta di MVU al posto di MVC è motivata dal fatto che il **flusso è unidirezionale**: nessun componente grafico
+modifica direttamente lo stato, ma tutti si limitano a emettere messaggi, e l'unico punto in cui il modello viene
+riassegnato è la funzione di dispatch. Questo elimina alla radice le incoerenze tipiche delle interfacce a callback e
+rende la logica dell'interfaccia collaudabile in isolamento, senza istanziare alcun componente Swing.
 
-### DSL
+## Struttura del Progetto
 
-Costituisce l'interfaccia principale del framework verso chi scrive
-simulazioni. Comprende i *builder* che accumulano la specifica — ambiente,
-comportamenti, regole — e il vocabolario di funzioni con cui la specifica viene
-espressa: sorgenti di azione come `moveRandomly` o `tellNeighbours`, condizioni
-come `atLeastNear` o `inside`, e i costrutti infissi che li legano fra loro.
+![Struttura del Progetto](img/A1-architecture-modules.png)
 
-Il modulo è organizzato per **scope annidati**: ogni blocco del linguaggio
-mette a disposizione, tramite un parametro contestuale, il costruttore
-dell'oggetto che si sta definendo, e le funzioni scritte all'interno del blocco
-vi si registrano. Il risultato è che l'utente vede soltanto i costrutti
-pertinenti al punto in cui si trova.
+La struttura del progetto è organizzata in quattro moduli principali più un modulo di esempi, che riflettono la
+separazione delle responsabilità descritta sopra. Il diagramma evidenzia il vincolo architetturale fondamentale: le
+frecce di dipendenza puntano tutte verso il basso, e dal package `domain` non ne esce alcuna.
 
-Il `DSL` è un modulo di sola costruzione: il valore che produce è una
-`SimulationConfig`, dopodiché non partecipa più all'esecuzione.
+1. **domain**: definisce le astrazioni del modello ad agenti. `Agent` descrive l'entità simulata con la sua identità
+   (`AgentId`), il suo stato di moto (`P2d`, `V2d`), il suo stato di dominio e la sua eventuale `Memory`.
+   `Environment` aggrega la popolazione, lo `Space` con la relativa `BoundaryPolicy` e i punti di interesse, ed espone
+   il calcolo del vicinato delegandolo a una `NeighborStrategy` intercambiabile. `AgentContext` rappresenta la
+   fotografia locale su cui l'agente decide, mentre `Behavior`, `Action` e `InteractionRule` distinguono come un
+   agente agisce da come un agente cambia
 
-### Simulations
+2. **dsl**: fornisce il linguaggio dichiarativo. I builder (`SimulationBuilder`, `EnvironmentBuilder`,
+   `BehaviorsBuilder`, `RulesBuilder`) raccolgono le dichiarazioni scritte all'interno dei rispettivi blocchi tramite
+   **context function**, mentre `ConditionalBehavior`, `CompositeBehavior`, `DiscreteRules` e `ContinuousRules`
+   costituiscono il vocabolario con cui comportamenti e regole vengono espressi. La facciata `Simulation` ripubblica
+   l'intero namespace tramite la clausola `export`, così che l'utente debba conoscere un solo punto di ingresso
 
-Contiene i modelli dimostrativi realizzati sul framework. Ogni simulazione
-definisce il proprio tipo di stato, la propria configurazione espressa nel DSL
-e il criterio con cui i suoi stati vengono rappresentati graficamente.
+3. **engine**: contiene il motore di esecuzione. `SimulationConfig` è il prodotto immutabile del DSL e resta invariata
+   per l'intera esecuzione, `SimulationState` è ciò che evolve a ogni passo, e `SimulationEngine` implementa la
+   pipeline del tick, articolata in fasi separate di percezione, decisione, evoluzione della popolazione,
+   comunicazione e aggiornamento delle permanenze
 
-Le simulazioni non sono parte del framework: sono i suoi primi utilizzatori, e
-il fatto che condividano lo stesso `Engine` pur appartenendo a domini diversi
-costituisce la verifica pratica del requisito di genericità.
+4. **gui**: costituisce l'interfaccia grafica. `Mvu` definisce la funzione di aggiornamento, `SimulationWindow`
+   collega il ciclo MVU ai componenti Swing e al timer, `SimulationPanel` disegna il mondo e `StatisticsPanel`
+   mostra l'andamento quantitativo della simulazione. Le type class `Renderable` e `POIRenderable` disaccoppiano
+   l'aspetto grafico dal tipo di stato, che la libreria non conosce
 
-### GUI
+5. **simulations**: raccoglie i quattro modelli di esempio (`Epidemic`, `OpinionDynamics`, `AntColony`,
+   `AlarmSpreading`). Non fanno parte della libreria ma ne sono i clienti, e ciascuno è stato scelto per esercitare
+   una combinazione differente delle funzionalità offerte dal DSL
 
-Si occupa della rappresentazione grafica di uno `SimulationState` e del ciclo di
-aggiornamento a schermo. Non contiene logica di simulazione: legge la
-popolazione corrente e la disegna.
+![Panoramica delle Astrazioni](img/A2-architecture-overview.png)
 
-Il collegamento fra lo stato di un agente e il suo aspetto è mediato da una
-*type class* `Renderable`, che ogni simulazione fornisce per il proprio tipo di
-stato. In questo modo la `GUI` sa disegnare qualunque simulazione senza
-conoscerne il dominio, e una simulazione può essere definita e testata anche in
-assenza di interfaccia grafica.
+Il secondo diagramma mostra le principali astrazioni di ciascun modulo e le relazioni che le legano. Sono
+riconoscibili i punti di estensione del sistema, tutti realizzati come trait o type class: `Space` e `BoundaryPolicy`
+per la geometria del mondo, `NeighborStrategy` per l'algoritmo di ricerca dei vicini, `Behavior` e `InteractionRule`
+per la logica degli agenti, `Renderable` per la presentazione. Aggiungere una nuova forma di spazio, una nuova
+strategia di vicinato o un nuovo tipo di stato non richiede di modificare alcun codice esistente, in accordo con il
+principio Open/Closed.
 
-## Il ciclo di esecuzione
+## Il flusso di una simulazione
 
-A ogni tick il motore esegue le stesse fasi, nello stesso ordine.
+![Flusso di una Simulazione](img/A3-simulation-flow.png)
 
-1. **Percezione** — per ogni agente viene costruito il suo `AgentContext`:
-   l'agente stesso, i vicini entro il raggio di percezione, il tick corrente e
-   la sua permanenza nei punti di interesse.
-2. **Deliberazione** — fra i `Behavior` disponibili viene individuato quello
-   applicabile allo stato dell'agente, che produce le azioni; parallelamente
-   viene individuata la `InteractionRule` applicabile, che ne determina il nuovo
-   stato. Le due selezioni avvengono con lo stesso meccanismo e sono
-   indipendenti fra loro.
-3. **Applicazione** — le azioni vengono realizzate: gli spostamenti richiesti
-   vengono composti e vincolati dalla politica di confine, i ricordi vengono
-   registrati, gli agenti generati entrano nella popolazione e quelli eliminati
-   ne escono.
-4. **Consegna** — i ricordi che un agente ha comunicato ad altri vengono
-   recapitati ai rispettivi destinatari.
+Il diagramma illustra il percorso che porta da una descrizione dichiarativa a un'animazione sullo schermo, e rende
+esplicita una scelta architetturale ricorrente: la **separazione tra la fase di costruzione e la fase di esecuzione**.
 
-Le fasi 3 e 4 sono distinte perché rispondono a nature diverse: la prima
-riguarda gli effetti che un agente produce su di sé, la seconda quelli che
-produce su altri. Tenerle separate consente di aggregare correttamente gli
-effetti su un singolo agente — più richieste di movimento nello stesso tick
-compongono un unico spostamento — senza per questo rinunciare alla
-comunicazione fra agenti.
+Durante la costruzione, i builder accumulano le dichiarazioni in uno stato mutabile, che è però confinato al loro
+interno e non sopravvive alla chiamata a `build()`. Il risultato è una `SimulationConfig` immutabile, che costituisce
+il confine tra i due mondi: da quel momento in poi nessuna struttura dati viene più modificata.
 
-La percezione è calcolata interamente prima che qualsiasi aggiornamento venga
-applicato: è questa la garanzia che l'ordine con cui gli agenti vengono
-elaborati non influenzi il risultato.
+Durante l'esecuzione, ogni passo è una funzione pura da `SimulationState` a `SimulationState`. Ne discendono tre
+proprietà utili: la simulazione è **riproducibile**, poiché lo stesso stato iniziale produce la stessa evoluzione a
+meno delle sole componenti probabilistiche; è **collaudabile** senza alcuna infrastruttura di supporto, poiché
+verificare un tick significa confrontare due valori; ed è **riavviabile** in modo elementare, poiché basta rigenerare
+lo stato dalla configurazione, che non è mai stata alterata.
 
-## Principi di programmazione funzionale
+## Principi di Programmazione Funzionale
 
-L'architettura applica i principi del paradigma funzionale, come richiesto dai
-requisiti.
+L'intero progetto è stato sviluppato seguendo principi di programmazione funzionale, come richiesto dai requisiti:
 
-- **Immutabilità**: `Agent`, `Environment`, `SimulationState` e ogni struttura
-  del dominio sono immutabili. Ogni fase del tick produce un nuovo valore invece
-  di modificare quello precedente, il che elimina gli effetti collaterali e
-  rende ogni stato intermedio ispezionabile.
-- **Funzioni pure**: `Behavior` e `InteractionRule` sono funzioni della sola
-  percezione locale. Le uniche sorgenti di non determinismo sono quelle
-  dichiarate esplicitamente nel modello, come le condizioni probabilistiche.
-- **Algebraic Data Type**: `Action` è un tipo somma che enumera gli effetti che
-  il motore sa interpretare. La chiusura dell'insieme è deliberata: il
-  compilatore verifica l'esaustività del trattamento, e l'aggiunta di un
-  effetto è una decisione consapevole sul contratto fra modello e motore.
-- **Type class**: la dipendenza del framework da capacità specifiche del tipo di
-  stato è espressa tramite *type class* — `Renderable` per la
-  rappresentazione grafica, `Continuous` per le regole su stati a valore
-  numerico. Questo evita di imporre gerarchie di ereditarietà sui tipi definiti
-  dall'utente.
-- **Contextual abstraction**: i blocchi del DSL sono *context function*, e i
-  costruttori vengono propagati come parametri impliciti. È il meccanismo che
-  rende possibile la struttura a scope annidati senza che l'utente debba
-  nominare i builder.
-- **Opaque type**: gli identificatori e i valori vincolati — `AgentId`, `PoiId`,
-  `Chance` — sono tipi opachi su primitivi, così da ottenere sicurezza di tipo
-  senza costo a runtime.
-- **Composizione**: il vocabolario del DSL è costituito da funzioni combinabili
-  fra loro. Un comportamento complesso non richiede un costrutto dedicato, ma si
-  ottiene componendo comportamenti elementari.
+* **Immutabilità**: tutte le strutture dati del dominio sono immutabili. Ogni aggiornamento di un agente, di una
+  memoria o di un ambiente produce una nuova istanza, e l'unico stato mutabile del sistema è confinato nei builder e
+  nei componenti Swing, dove serve rispettivamente ad accumulare la configurazione e a interfacciarsi con una libreria
+  imperativa
 
-[Indice](0-index.md) | [Capitolo Precedente](3-analysis.md) | [Capitolo Successivo](5-design.md)
+* **Funzioni pure**: la decisione di un agente e l'avanzamento della simulazione sono funzioni prive di effetti
+  collaterali. Un comportamento non muove un agente, ma restituisce l'intenzione di muoverlo sotto forma di valore
+  `Action`, che il motore interpreta separatamente
+
+* **Higher-order function e composizione**: comportamenti e condizioni sono semplici alias di funzione
+  (`ActionSource`, `Condition`), il che rende la composizione gratuita. I combinatori `to`, `orElse`, `onlyIf`, `and`
+  e `or` costruiscono comportamenti e predicati complessi a partire da elementi elementari, senza gerarchie di classi
+
+* **Type class**: `Continuous` rende idoneo alle regole continue un qualunque tipo di stato, e `Renderable` ne
+  definisce l'aspetto grafico, entrambi senza imporre vincoli di ereditarietà al tipo dell'utente. `NeighborStrategy`
+  è fornita come **given instance** di default, così che sia configurabile ma mai obbligatoria
+
+* **Opaque type**: `AgentId` e `Chance` garantiscono type-safety senza alcun costo a runtime, impedendo di confondere
+  un identificatore o una probabilità con un numero qualsiasi e concentrando la validazione nel punto di costruzione
+
+* **Context function**: i blocchi del DSL sono funzioni con parametro di contesto (`Builder[S] ?=> Unit`), meccanismo
+  che consente alle dichiarazioni annidate di registrarsi presso il builder corretto senza che l'utente debba mai
+  nominarlo
+
+* **Monade di stato**: l'aggiornamento dell'interfaccia è espresso come `State[Model[S], Unit]`, permettendo di
+  comporre più trasformazioni con `flatMap` e mantenendo funzionale la logica di un componente per sua natura
+  imperativo
+
+* **Enum e pattern matching esaustivo**: azioni, messaggi, politiche di frontiera ed eventi di memoria sono insiemi
+  chiusi, il che consente al compilatore di verificare che ogni caso sia gestito e trasforma in errori di compilazione
+  quelle che sarebbero altrimenti omissioni silenziose
