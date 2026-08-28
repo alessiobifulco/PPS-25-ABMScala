@@ -14,8 +14,8 @@ astrazioni offerte per modellare un fenomeno.
   costrutto offerto deve essere indipendente dal dominio applicativo e
   riutilizzabile.
 - **Rendere la definizione di una simulazione dichiarativa**: l'utente deve
-  poter esprimere *cosa* caratterizza il modello — chi sono gli **agent**, qual è il loro
-  **behavior**, come cambiano **state** — senza doversi occupare di *come* la
+  poter esprimere *cosa* caratterizza il modello: chi sono gli **agent**, qual è il loro
+  **behavior**, come cambiano **state**, senza doversi occupare di *come* la
   simulazione viene eseguita. Questo requisito motiva la scelta di un Domain
   Specific Language interno come interfaccia principale del framework.
 - **Utilizzo di Scala 3 e del paradigma funzionale**: il progetto deve essere
@@ -61,7 +61,7 @@ Descrive che cosa fa un **agent** in un dato **state**:
 - produce la lista delle **action** che l'**agent** intende compiere. Le **action**
   previste sono il movimento, la registrazione di un **memory record**, la comunicazione
   di un **memory record** a un altro **agent**, la generazione di un nuovo **agent** e la
-  propria rimozione dalla simulazione. Un'**action** è un dato inerte: descrive
+  propria rimozione dalla simulazione. Un'**action** è un dato che descrive
   l'intenzione, mentre la sua applicazione compete all'**engine**;
 - non modifica lo **state** dell'**agent**: il cambio di **state** è responsabilità
   esclusiva delle **interaction rule**.
@@ -71,7 +71,7 @@ Descrive che cosa fa un **agent** in un dato **state**:
 Governa i cambi di **state** di un **agent**:
 
 - è associata allo **state** di partenza a cui si applica;
-- è subordinata a una condizione sulla **perception** dell'**agent** — tipicamente la
+- è subordinata a una condizione sulla **perception** dell'**agent**, tipicamente la
   presenza di **neighbor** in un certo **state**, la posizione rispetto a un **point of interest**,
   il contenuto della **memory** o un evento probabilistico;
 - produce il nuovo **state** dell'**agent**.
@@ -127,10 +127,9 @@ Dal punto di vista di chi utilizza il framework, il sistema deve consentire:
     - comporre più **action** elementari in un **behavior** unico;
     - esprimere movimento casuale, diretto verso un punto o in allontanamento da
       esso, e movimento coordinato rispetto ai **neighbor**;
-    - esprimere **action** sulla **memory** e sulla popolazione.
 - **La definizione delle interaction rule**:
     - dichiarare una transizione fra due **state** e la condizione che la abilita;
-    - esprimere condizioni sui **neighbor**, sui **point of interest**, sulla **memory** e
+    - esprimere condizioni sui **neighbor**, sui **point of interest** e
       sul caso, e comporle fra loro;
     - definire **interaction rule** su **state** a valore continuo, non enumerabili.
 - **L'esecuzione e l'osservazione**:
@@ -219,11 +218,15 @@ Il sistema dovrà occuparsi di:
       collaterali;
     - codice documentato tramite ScalaDoc sulle astrazioni pubbliche.
 - **Testabilità**:
-    - **behavior** e **interaction rule**, essendo funzioni pure del contesto locale, devono
-      essere verificabili singolarmente senza avviare una simulazione;
-    - l'avanzamento della simulazione deve essere verificabile in isolamento
-      dalla rappresentazione grafica;
-    - buona copertura dei test sulle logiche critiche dell'**engine**.
+    - comportamenti e regole di interazione devono poter essere verificati costruendo
+      direttamente un contesto di prova, senza eseguire una simulazione completa;
+    - l'avanzamento della simulazione deve essere verificabile a partire da uno stato
+      noto e confrontabile con lo stato atteso, indipendentemente dalla presenza di
+      una interfaccia grafica;
+    - le dipendenze verso componenti esterne al modulo sotto test devono poter essere
+      sostituite da implementazioni di prova, così da isolare la logica verificata;
+    - le parti non deterministiche devono essere circoscritte, in modo che il resto
+      del comportamento resti verificabile in modo ripetibile.
 
 ## Requisiti di implementazione
 
@@ -232,7 +235,7 @@ Il sistema dovrà occuparsi di:
 - **Interfaccia**: DSL interno per la definizione delle simulazioni, interfaccia
   grafica per la loro osservazione
 - **Build tool**: SBT
-- **Testing**: ScalaTest
+- **Testing**: ScalaTest, Mockito
 - **Versioning e collaborazione**: Git, GitHub, GitHub Actions per la CI
 
 [Indice](0-index.md) | [Capitolo Precedente](2-process.md) | [Capitolo Successivo](4-architecture.md)

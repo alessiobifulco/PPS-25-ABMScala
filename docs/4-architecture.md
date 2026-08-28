@@ -158,3 +158,5 @@ L'intero progetto è stato sviluppato seguendo principi di programmazione funzio
 * **Enum e pattern matching esaustivo**: azioni, messaggi, politiche di frontiera ed eventi di memoria sono insiemi
   chiusi, il che consente al compilatore di verificare che ogni caso sia gestito e trasforma in errori di compilazione
   quelle che sarebbero altrimenti omissioni silenziose
+
+[Indice](0-index.md) | [Capitolo Precedente](3-analysis.md) | [Capitolo Successivo](5-design.md)
