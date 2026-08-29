@@ -8,8 +8,13 @@ import dsl.Simulation.*
 
 import java.awt.Color
 
+/** A simulation scenario modeling biological foraging behavior. Agents act as ants shuttling between a central nest and
+  * peripheral food sources, utilizing memory to optimize their trips once food is discovered.
+  */
 object AntColony:
 
+  /** The current occupational role of the ant.
+    */
   enum Task:
     case Foraging, Carrying
 
@@ -27,8 +32,13 @@ object AntColony:
   private val nearFood = POI(PoiId(1), "Near Food", P2d(120, 120), 25, harvestDelay)
   private val farFood = POI(PoiId(2), "Far Food", P2d(680, 480), 25, harvestDelay)
 
+  /** A composite behavior demonstrating DSL chaining. The ant prioritizes moving towards a remembered food source; if
+    * memory is empty, it falls back to wandering randomly.
+    */
   private def searchForFood: ActionSource[Task] = moveTowardsRemembered[Task](speed) orElse moveRandomly(speed)
 
+  /** The declarative blueprint of the simulation using the DSL.
+    */
   val config: SimulationConfig[Task] = Simulation.of[Task]:
     environment:
       space(RectangularSpace(width, height)) withBoundary bounce
