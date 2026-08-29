@@ -1,3 +1,9 @@
+---
+title: Introduzione
+nav_order: 1
+parent: Report
+---
+
 # Introduzione
 
 Il progetto **ABMScala** si pone l'obiettivo di realizzare un framework generico

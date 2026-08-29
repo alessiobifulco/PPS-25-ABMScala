@@ -1,3 +1,9 @@
+---
+title: Analisi
+nav_order: 3
+parent: Report
+---
+
 # Analisi
 
 L'analisi del problema svolta nella prima fase del progetto ha permesso di
@@ -16,8 +22,11 @@ astrazioni offerte per modellare un fenomeno.
 - **Rendere la definizione di una simulazione dichiarativa**: l'utente deve
   poter esprimere *cosa* caratterizza il modello: chi sono gli **agent**, qual è il loro
   **behavior**, come cambiano **state**, senza doversi occupare di *come* la
-  simulazione viene eseguita. Questo requisito motiva la scelta di un Domain
-  Specific Language interno come interfaccia principale del framework.
+  simulazione viene eseguita. Lo stesso vale per l'**environment**: la forma dello
+  spazio, il comportamento al confine, la composizione della popolazione iniziale e
+  i **point of interest** devono essere dichiarati come caratteristiche del modello,
+  non costruiti passo per passo dall'utente. Questo requisito motiva la scelta di un
+  Domain Specific Language interno come interfaccia principale del framework.
 - **Utilizzo di Scala 3 e del paradigma funzionale**: il progetto deve essere
   sviluppato applicando costrutti funzionali di alto livello, come richiesto
   dagli obiettivi del corso.
@@ -40,7 +49,7 @@ Entità autonoma che popola la simulazione:
 - può possedere una **memory** di ciò che ha percepito. La **memory** ha capacità
   limitata, definita alla configurazione della simulazione: i **memory record** più
   vecchi vengono dimenticati per fare spazio a quelli nuovi. Ogni **memory record** è
-  datato con il tick in cui è stato acquisito, così che una condizione possa distinguere 
+  datato con il tick in cui è stato acquisito, così che una condizione possa distinguere
   le informazioni recenti da quelle obsolete, e può essere acquisito
   per **perception** diretta oppure ricevuto da un altro **agent**, il che rende
   possibile la propagazione di informazione oltre il raggio di **perception**;
@@ -129,13 +138,16 @@ Dal punto di vista di chi utilizza il framework, il sistema deve consentire:
       esso, e movimento coordinato rispetto ai **neighbor**;
 - **La definizione delle interaction rule**:
     - dichiarare una transizione fra due **state** e la condizione che la abilita;
-    - esprimere condizioni sui **neighbor**, sui **point of interest** e
-      sul caso, e comporle fra loro;
-    - definire **interaction rule** su **state** a valore continuo, non enumerabili.
+    - esprimere condizioni sui **neighbor** e sui **point of interest**;
+    - definire **interaction rule** su **state** a valore continuo, non enumerabili, così come su **state** discreti, enumerabili.
 - **L'esecuzione e l'osservazione**:
     - scegliere quale simulazione avviare;
     - osservare l'evoluzione della popolazione, con gli **agent** distinguibili
-      graficamente in base al proprio **state**.
+      graficamente in base al proprio **state**;
+    - seguire l'andamento quantitativo della simulazione mentre questa procede,
+      disponendo statistiche in tempo reale;
+    - sospendere e riprendere la raccolta delle statistiche indipendentemente
+      dall'esecuzione della simulazione.
 
 ### Requisiti di sistema
 
@@ -178,6 +190,11 @@ Il sistema dovrà occuparsi di:
       **agent** determinato dal suo **state**;
     - disegnare i confini dello spazio e i **point of interest**;
     - aggiornare la rappresentazione al procedere dei tick.
+- **Statistiche**:
+    - calcolare a ogni tick la composizione della popolazione per **state**;
+    - contare gli **agent** presenti in ciascun **point of interest**;
+    - determinare la distribuzione spaziale degli **agent**;
+    - mantenere il costo di questi calcoli compatibile con l'aggiornamento a ogni tick.
 
 ## Requisiti non funzionali
 

@@ -59,15 +59,12 @@ Per l'interfaccia grafica è stato adottato il pattern **Model-View-Update (MVU)
 
 La scelta di MVU al posto di MVC è motivata dal fatto che il **flusso è unidirezionale**: nessun componente grafico
 modifica direttamente lo stato, ma tutti si limitano a emettere messaggi, e l'unico punto in cui il modello viene
-riassegnato è la funzione di dispatch. Questo elimina alla radice le incoerenze tipiche delle interfacce a callback e
-rende la logica dell'interfaccia collaudabile in isolamento, senza istanziare alcun componente Swing.
-Nel pattern MVU il `Model` rappresenta lo stato applicativo della simulazione ed è una struttura dati immutabile. 
-Le operazioni dell'utente e gli aggiornamenti periodici del timer vengono trasformati in valori dell'enum `Msg`, 
-interpretati da `Mvu.update` come trasformazioni `State[Model[S], Unit]`. La finestra applica la trasformazione
-al modello corrente e aggiorna i pannelli attraverso il nuovo valore prodotto.
-I componenti Swing mantengono soltanto lo stato locale necessario alla visualizzazione: il `SimulationPanel` 
-conserva il modello da ridisegnare, mentre il `StatisticsPanel` conserva lo storico delle distribuzioni,
-i dati sulle transizioni e la griglia di densità. 
+riassegnato è la funzione di dispatch. Questo riduce le incoerenze tipiche delle interfacce a callback e rende la
+logica dell'interfaccia collaudabile senza istanziare alcun componente Swing.
+
+I componenti Swing conservano soltanto lo stato locale necessario alla visualizzazione: il `SimulationPanel` mantiene
+il modello da ridisegnare, mentre il `StatisticsPanel` mantiene lo storico delle distribuzioni, i dati sulle
+transizioni e la griglia di densità.
 
 ## Struttura del Progetto
 
@@ -95,23 +92,11 @@ frecce di dipendenza puntano tutte verso il basso, e dal package `domain` non ne
    pipeline del tick, articolata in fasi separate di percezione, decisione, evoluzione della popolazione,
    comunicazione e aggiornamento delle permanenze
 
-4. **gui**: è articolata in due componenti principali: una finestra di simulazione, che coordina l'interazione con l'utente 
-    e l'aggiornamento del modello, e due pannelli specializzati nella rappresentazione grafica e nell'analisi dell'evoluzione.
-    Il `MainMenu` costituisce il punto di ingresso dell'applicazione e presenta all'utente le simulazioni disponibili 
-    attraverso una lista di `SimulationOption`. La selezione di un'opzione nasconde il menu e avvia la finestra associata 
-    alla simulazione; alla chiusura di quest'ultima, una callback consente di tornare al menu principale.
-    La `SimulationWindow` gestisce il ciclo di vita della simulazione e collega il modello alla libreria Swing. 
-    Un timer invia periodicamente il messaggio `Tick`, mentre i pulsanti consentono di arrestare o riavviare l'esecuzione, 
-    ripristinare la configurazione iniziale e tornare al menu principale. La finestra contiene il `SimulationPanel`, 
-    dedicato alla scena simulata, e il `StatisticsPanel`, dedicato alla visualizzazione dei dati aggregati.
-    Il `SimulationPanel` disegna il confine dello spazio, i `Point of Interest` e gli agenti presenti nell'ambiente. 
-    La forma dello spazio determina la geometria del confine, mentre le type class `Renderable` e `POIRenderable` 
-    permettono di associare colori agli stati degli agenti e ai punti di interesse senza introdurre dipendenze 
-    dal dominio specifico della simulazione.
-    Il `StatisticsPanel` affianca alla rappresentazione della scena una vista quantitativa dell'evoluzione. 
-    Mostra il tick corrente, la numerosità della popolazione, il numero complessivo di transizioni
-    di stato e la distribuzione degli agenti nei diversi stati nel tempo. Inoltre visualizza il numero di agenti
-    presenti nei `Point of Interest` e una griglia di densità spaziale. 
+4. **gui**: contiene l'interfaccia grafica. `MainMenu` è il punto di ingresso e presenta le simulazioni disponibili
+   come `SimulationOption`; `SimulationWindow` gestisce il ciclo di vita di una singola simulazione e collega il ciclo
+   MVU ai componenti Swing; `SimulationPanel` disegna la scena e `StatisticsPanel` ne mostra l'andamento quantitativo.
+   Le type class `Renderable` e `POIRenderable` associano un colore agli stati e ai punti di interesse, evitando che il
+   modulo grafico dipenda dal dominio della singola simulazione
 
 5. **simulations**: raccoglie i quattro modelli di esempio (`Epidemic`, `OpinionDynamics`, `AntColony`,
    `AlarmSpreading`). Non fanno parte della libreria ma ne sono i clienti, e ciascuno è stato scelto per esercitare
@@ -164,8 +149,8 @@ L'intero progetto è stato sviluppato seguendo principi di programmazione funzio
   definisce l'aspetto grafico, entrambi senza imporre vincoli di ereditarietà al tipo dell'utente. `NeighborStrategy`
   è fornita come **given instance** di default, così che sia configurabile ma mai obbligatoria
 
-* **Opaque type**: `AgentId` e `Chance` garantiscono type-safety senza alcun costo a runtime, impedendo di confondere
-  un identificatore o una probabilità con un numero qualsiasi e concentrando la validazione nel punto di costruzione
+* **Opaque type**: `AgentId` e `Chance` impediscono di confondere un identificatore o una probabilità con un numero
+  qualsiasi, senza introdurre un wrapper a runtime, e concentrano la validazione nel punto di costruzione
 
 * **Context function**: i blocchi del DSL sono funzioni con parametro di contesto (`Builder[S] ?=> Unit`), meccanismo
   che consente alle dichiarazioni annidate di registrarsi presso il builder corretto senza che l'utente debba mai

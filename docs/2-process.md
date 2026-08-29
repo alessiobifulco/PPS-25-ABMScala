@@ -1,3 +1,9 @@
+---
+title: Processo di sviluppo
+nav_order: 2
+parent: Report
+---
+
 # Processo di Sviluppo
 
 ## Metodologia
@@ -22,8 +28,8 @@ in modo equilibrato all'implementazione del sistema.
 ## Organizzazione degli Sprint
 
 Il lavoro è organizzato in **sprint settimanali** della durata di circa una
-settimana, con un carico di lavoro previsto di **20 ore per membro per sprint**, 
-il monte ore è stato pensato per permettere di realizzare un progetto a un livello comparabile 
+settimana, con un carico di lavoro previsto di **20 ore per membro per sprint**,
+il monte ore è stato pensato per permettere di realizzare un progetto a un livello comparabile
 con i progetti a tre membri.
 
 Per ogni sprint sono previsti tre momenti formali:
@@ -33,7 +39,7 @@ Per ogni sprint sono previsti tre momenti formali:
 - **Sprint Review** (fine sprint): verifica di quanto prodotto rispetto
   all'obiettivo dello sprint e alla definition of done;
 - **Sprint Retrospective** (fine sprint): valutazione del processo di lavoro
-  del team, confrontandosi con lo stakeholder, con l'obiettivo di individuare 
+  del team, confrontandosi con lo stakeholder, con l'obiettivo di individuare
   miglioramenti per lo sprint successivo.
 
 ### Definition of Done
@@ -47,13 +53,14 @@ Un task si considera completato quando:
 
 ## Strumenti
 
-| Strumento      | Utilizzo                         |
-|----------------|----------------------------------|
-| Git + GitHub   | Versionamento del codice         |
-| SBT            | Build tool e gestione dipendenze |
-| GitHub Actions | Continuous Integration           |
-| ScalaTest      | Testing                          |
-| IntelliJ IDEA  | IDE di sviluppo                  |
+| Strumento      | Utilizzo                               |
+|----------------|----------------------------------------|
+| Git + GitHub   | Versionamento del codice               |
+| SBT            | Build tool e gestione dipendenze       |
+| GitHub Actions | Continuous Integration                 |
+| ScalaTest      | Testing unitario e di integrazione     |
+| Mockito        | Sostituzione delle dipendenze nei test |
+| IntelliJ IDEA  | IDE di sviluppo                        |
 
 ## Versionamento
 
@@ -73,9 +80,9 @@ Ad ogni push sul repository vengono eseguiti automaticamente tramite
 GitHub Actions:
 
 - compilazione del progetto con SBT;
-- esecuzione di tutti i test.
-- check della formattazione tramite Scala formstter (scalafmt)
-- generazione JAR in release
+- esecuzione di tutti i test;
+- check della formattazione tramite Scala formatter (scalafmt);
+- generazione del JAR di release.
 
 ## Backlog e Report degli Sprint
 
