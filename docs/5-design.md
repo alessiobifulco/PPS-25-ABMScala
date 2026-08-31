@@ -31,6 +31,8 @@ Le implementazioni fornite sono `RectangularSpace` e `CircularSpace`. Il primo r
     * le operazioni geometriche restituiscono nuovi valori invece di modificare lo spazio, mantenendo l'immutabilità delle strutture del dominio.
 * **Casi degeneri**: la normalizzazione è definita per casi anziché con un confronto esplicito, restituendo il vettore nullo quando la lunghezza è nulla, e protegge da valori non definiti tutte le operazioni del DSL che ne fanno uso
 
+![Space Diagram](img/11-space.png)
+
 ### Agente e Identità
 
 Il trait **`Agent[S]`** rappresenta la singola entità simulata ed è definito come struttura puramente descrittiva: identità, posizione, velocità, stato di dominio e memoria opzionale.
@@ -69,6 +71,8 @@ La ricerca dei vicini è astratta dal trait **`NeighborStrategy`**. L'implementa
     * la validazione dell'ambiente verifica la compatibilità tra politica di frontiera e spazio, oltre alla posizione valida dei `Point of Interest`;
     * gli aggiornamenti della popolazione producono un nuovo ambiente tramite `withAgents`, senza modificare quello precedente.
 
+![Environment Diagram](img/12-enviroment.png)
+
 ### Point of Interest
 
 Il `Point of Interest` è modellato dalla `case class` **`POI`** e rappresenta una regione circolare dotata di posizione, raggio e nome. Non è un agente e non possiede un comportamento autonomo: costituisce invece un elemento dell'ambiente che può essere osservato dagli agenti e utilizzato come condizione dalle regole di interazione.
@@ -76,6 +80,8 @@ Il `Point of Interest` è modellato dalla `case class` **`POI`** e rappresenta u
 La verifica di appartenenza è effettuata confrontando la distanza tra la posizione dell'agente e il centro del punto con il relativo raggio. L'Engine aggiorna a ogni tick la mappa delle permanenze, incrementando il conteggio quando l'agente rimane all'interno del POI e azzerandolo quando ne esce. La condizione `settledIn` utilizza queste informazioni per verificare se è stato raggiunto l'`activationDelay` previsto dal punto di interesse e distinguere così la sosta effettiva dal semplice attraversamento.
 
 * **Scelte di design**: il `POI` è mantenuto indipendente dalla logica degli agenti e dalla rappresentazione grafica. La sua presenza nel dominio consente al DSL di esprimere condizioni spaziali e temporali senza introdurre comportamenti specializzati nell'Engine.
+
+![Point of Interest Diagram](img/13-poi.png)
 
 ### Memoria e Credenze
 
@@ -121,23 +127,34 @@ Il DSL è il livello con cui l'utente del framework descrive una simulazione. L'
 
 ### Struttura a Builder e Context Function
 
-La costruzione avviene tramite quattro builder cooperanti — `SimulationBuilder`, `EnvironmentBuilder`, `BehaviorsBuilder` e `RulesBuilder` — attivati dai blocchi `environment`, `behavior` e `rules`. L'`EnvironmentBuilder` è il componente responsabile della configurazione dell'ambiente e della popolazione iniziale: raccoglie le impostazioni durante l'esecuzione del blocco `environment` e le materializza, tramite `build()`, in un `EnvironmentSpec` completo.
+La costruzione avviene tramite quattro builder cooperanti — `SimulationBuilder`, `EnvironmentBuilder`, `BehaviorsBuilder` e `RulesBuilder` — attivati dai blocchi `environment`, `behavior` e `rules`.
 
 * **Responsabilità**:
+    * `EnvironmentBuilder`: raccogliere la configurazione dell'ambiente e della popolazione iniziale e materializzarla, tramite `build()`, in un `EnvironmentSpec` completo
     * `BehaviorsBuilder` e `RulesBuilder`: accumulare rispettivamente i comportamenti e le regole dichiarati all'interno del proprio blocco
     * `SimulationBuilder`: aggregare le tre parti e materializzarle nella `SimulationConfig` finale, istanziando la popolazione iniziale a partire dalle funzioni generatrici
-    * `EnvironmentBuilder`: configurare lo spazio e la relativa politica di frontiera; definire il raggio di percezione degli agenti; specificare la numerosità della popolazione e la funzione che determina lo stato di ciascun agente;
-      specificare la funzione che determina la posizione iniziale degli agenti; impostare la capacità opzionale della memoria; raccogliere i `Point of Interest` presenti nell'ambiente.
 * **Meccanismo**: ogni blocco è una **context function** (`Builder[S] ?=> Unit`). Il builder viene creato dal blocco stesso e reso disponibile come parametro `using` a tutte le costruzioni annidate, che possono quindi registrarsi senza mai essere nominate esplicitamente dall'utente. È questo il meccanismo che consente di scrivere `Dead whenAgentIs Infected iff chanceOf(mortalityChance)` come istruzione autonoma, e allo stesso modo le operazioni esposte dall'object `EnvironmentBuilder` utilizzano il builder implicito associato al blocco `environment`
-    * Le configurazioni intermedie, come `SpaceConfig` e `PopulationConfig`, permettono di concatenare le impostazioni mantenendo la sintassi del DSL leggibile
 * **Scelte di design**:
     * Lo stato mutabile è **confinato** nelle implementazioni private dei builder e non sopravvive alla costruzione: l'esito è una `SimulationConfig` immutabile
     * `BehaviorsBuilder` ordina i comportamenti raccolti in modo che quello di default risulti sempre ultimo, rendendo l'esito indipendente dall'ordine in cui l'utente li ha scritti
     * Le configurazioni incomplete o incoerenti sono intercettate in fase di costruzione tramite precondizioni e messaggi espliciti
-    * Anche in `EnvironmentBuilder` lo stato mutabile è confinato nell'implementazione privata: il client non costruisce direttamente l'ambiente, ma definisce le funzioni necessarie alla sua inizializzazione. Il metodo `build()` verifica la presenza dello spazio e della popolazione e controlla che la numerosità sia positiva; il risultato è un `EnvironmentSpec`, che il `SimulationBuilder` trasforma nell'ambiente e nella popolazione iniziali, mentre le validazioni sulla coerenza dell'ambiente sono applicate durante la sua costruzione
-
 
 ![DSL Builders Diagram](img/04-dsl-builders.png)
+
+### Configurazione dell'Ambiente
+
+L'object **`EnvironmentBuilder`** fornisce il vocabolario del blocco `environment`, ovvero la parte del DSL con cui l'utente dichiara la forma del mondo e la popolazione che lo abita.
+
+* **Costruzioni disponibili**: la scelta dello spazio e della politica di frontiera (`space`, `withBoundary`), il raggio di percezione degli agenti (`perception`), la numerosità della popolazione e la funzione che ne determina lo stato (`population`, `of`, `eachBeing`, `withOne`), la funzione che ne determina la posizione iniziale (`placedAt`), la capacità opzionale della memoria (`memory`) e i `Point of Interest` presenti nell'ambiente (`poi`)
+* **Configurazioni intermedie**: `space` e `population` non restituiscono `Unit` ma rispettivamente uno `SpaceConfig` e un `PopulationConfig`, che espongono i propri affinamenti come metodi `infix` incatenabili. È questo il meccanismo che permette di scrivere la configurazione dello spazio e quella della popolazione come singole istruzioni leggibili, mantenendo comunque un unico builder a raccoglierle
+* **Differenziazione della popolazione**: `withOne` compone il generatore corrente con uno nuovo, così che un individuo possa distinguersi dal resto della popolazione senza che l'utente debba scrivere esplicitamente la funzione che discrimina in base all'indice
+* **Scelte di design**:
+    * Lo stato mutabile è confinato nell'implementazione privata `EnvironmentBuilderImpl`: il client non costruisce direttamente l'ambiente, ma dichiara le funzioni necessarie alla sua inizializzazione
+    * L'esito della costruzione non è un `Environment` ma un `EnvironmentSpec`, una descrizione ancora priva di agenti: è il `SimulationBuilder` a trasformarla nell'ambiente e nella popolazione iniziali, mantenendo la creazione degli identificatori in un unico punto
+    * `build()` verifica la presenza dello spazio e della popolazione e controlla che la numerosità sia positiva, mentre le validazioni sulla coerenza fra politica di frontiera, spazio e `Point of Interest` restano a carico della costruzione dell'`Environment`
+    * Le impostazioni non dichiarate hanno un valore di riposo: il rimbalzo come politica di frontiera e il posizionamento casuale nello spazio, così che una configurazione minimale resti comunque eseguibile
+
+![Environment Builder Diagram](img/17-enviroment-builder.png)
 
 ### Comportamenti Condizionali
 
@@ -242,6 +259,8 @@ L'enum **`Msg`** rappresenta gli eventi gestiti dalla GUI: avanzamento di un tic
 
 La `case class` **`State`** rappresenta una computazione che riceve uno stato e restituisce lo stato aggiornato insieme a un valore risultato. La type class **`Monad`** fornisce le operazioni `unit`, `map` e `flatMap`, permettendo di comporre trasformazioni successive senza gestire esplicitamente il passaggio del modello.
 
+![Model-View-Update Diagram](img/14-gui-mvu.png)
+
 ### Menu e Finestra di Simulazione
 
 Il **`MainMenu`** rappresenta il punto di ingresso dell'applicazione e presenta le simulazioni disponibili attraverso oggetti `SimulationOption`. La selezione di un'opzione nasconde il menu e apre la finestra della simulazione; alla chiusura della finestra, una callback permette di tornare al menu principale.
@@ -249,6 +268,8 @@ Il **`MainMenu`** rappresenta il punto di ingresso dell'applicazione e presenta 
 La **`SimulationWindow`** coordina i componenti Swing e il ciclo di aggiornamento. Contiene i pulsanti per tornare al menu, interrompere o riprendere l'esecuzione e riavviare la simulazione. Un timer a intervallo fisso genera periodicamente il messaggio `Tick`, che viene inviato al ciclo MVU. La finestra aggiorna quindi il modello e ridisegna i pannelli a partire dal nuovo valore prodotto.
 
 * **Scelte di design**: la funzione di dispatch è l'unico punto in cui il modello viene riassegnato. Timer e pulsanti si limitano a produrre messaggi, per cui il flusso resta unidirezionale anche in un contesto a callback
+
+![MVU Dispatch Sequence](img/16-mvu.png)
 
 ### Rendering
 
@@ -277,6 +298,8 @@ Lo **`StatisticsPanel`** affianca alla scena una rappresentazione quantitativa d
     * le etichette usate nel grafico provengono dalla stessa type class `Renderable` che determina i colori, così che rappresentazione e statistiche restino coerenti;
     * la raccolta delle statistiche può essere sospesa indipendentemente dalla simulazione, il che consente di osservare l'evoluzione senza aggiornare i grafici;
     * il pannello osserva il modello e non lo modifica: non ha alcun canale verso l'Engine e la sua rimozione non altera il comportamento della simulazione
+
+![GUI Rendering Diagram](img/15-gui-rendering.png)
 
 ## Simulazioni di Esempio
 
