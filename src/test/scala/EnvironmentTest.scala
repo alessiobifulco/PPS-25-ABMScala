@@ -1,21 +1,9 @@
-import domain.BoundaryPolicy.bounce
-import domain.{
-  Agent,
-  AgentId,
-  BoundaryPolicy,
-  CircularSpace,
-  Environment,
-  NeighborStrategy,
-  P2d,
-  POI,
-  PoiId,
-  RectangularSpace,
-  V2d
-}
+import domain.{Agent, AgentId, BoundaryPolicy, Environment, NeighborStrategy, P2d, POI, PoiId, RectangularSpace, V2d}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import org.mockito.Mockito.*
 
-class EnvironmentTest extends AnyFlatSpec with Matchers:
+class EnvironmentTest extends AnyFlatSpec, Matchers:
 
   private val space = RectangularSpace(width = 100.0, height = 50.0)
   private val radius = 10.0
@@ -45,19 +33,21 @@ class EnvironmentTest extends AnyFlatSpec with Matchers:
   it should "use BouncePolicy by default" in:
     environment.boundaryPolicy shouldBe BoundaryPolicy.bounce
 
-  it should "find the neighbors of an agent using the provided strategy" in:
-    given NeighborStrategy[String] = NeighborStrategy.bruteForce[String]
-    val neighbors = environment.neighborsOf(agent1, radius)
-    neighbors should contain(agent2)
-    neighbors should not contain distantAgent
-    neighbors should not contain agent1
+  it should "delegate neighbor search to the provided strategy" in:
+    val strategy = mock(classOf[NeighborStrategy[String]])
+    val expected = List(agent2)
+    when(strategy.neighborsOf(agent1, environment.agents, radius)).thenReturn(expected)
+    given NeighborStrategy[String] = strategy
+    environment.neighborsOf(agent1, radius) shouldBe expected
+    verify(strategy).neighborsOf(agent1, environment.agents, radius)
 
-  it should "return a neighborhood function using the provided strategy" in:
-    given NeighborStrategy[String] = NeighborStrategy.bruteForce[String]
-    val getNeighbors = environment.neighborhoods(radius)
-    val neighbors = getNeighbors(agent1)
-    neighbors should contain(agent2)
-    neighbors should not contain distantAgent
+  it should "delegate neighborhood creation to the provided strategy" in:
+    val strategy = mock(classOf[NeighborStrategy[String]])
+    val expected = (_: Agent[String]) => List(agent2)
+    when(strategy.prepare(environment.agents, radius)).thenReturn(expected)
+    given NeighborStrategy[String] = strategy
+    environment.neighborhoods(radius)(agent1) shouldBe List(agent2)
+    verify(strategy).prepare(environment.agents, radius)
 
   it should "start with no POIs by default" in:
     environment.pois shouldBe Nil
@@ -66,3 +56,14 @@ class EnvironmentTest extends AnyFlatSpec with Matchers:
     val poi = POI(PoiId(0), "name", P2d(200.0, 200.0), 10.0)
     an[IllegalArgumentException] should be thrownBy:
       Environment(space = space, agents = List.empty, pois = List(poi))
+
+  it should "return a new environment with different POIs" in:
+    val poi = POI(PoiId(0), "test", P2d(20.0, 20.0), 5.0)
+    val updatedEnvironment = environment.withPois(List(poi))
+    updatedEnvironment.pois shouldBe List(poi)
+    updatedEnvironment should not be theSameInstanceAs(environment)
+
+  it should "not modify the original POIs when updating them" in:
+    val poi = POI(PoiId(0), "test", P2d(20.0, 20.0), 5.0)
+    environment.withPois(List(poi))
+    environment.pois shouldBe Nil

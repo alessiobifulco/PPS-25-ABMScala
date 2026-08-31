@@ -1,32 +1,41 @@
-import domain.{BoundaryPolicy, P2d, RectangularSpace, V2d}
+import domain.{BoundaryPolicy, P2d, RectangularSpace, Space, V2d}
+import org.mockito.Mockito.*
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-class BoundaryPolicyTest extends AnyFlatSpec with Matchers:
+class BoundaryPolicyTest extends AnyFlatSpec, Matchers:
 
-  private val space = RectangularSpace(width = 100.0, height = 50.0)
+  private val position = P2d(0.0, 20.0)
+  private val velocity = V2d(-2.0, 1.0)
 
   "BouncePolicy" should "delegate boundary handling to the space" in:
-    val position = P2d(0.0, 20.0)
-    val velocity = V2d(-2.0, 1.0)
-    BoundaryPolicy.bounce(position, velocity, space) shouldBe space.bounce(position, velocity)
+    val space = mock(classOf[Space])
+    val expected = (position, velocity)
+    when(space.bounce(position, velocity)).thenReturn(expected)
+    BoundaryPolicy.bounce(position, velocity, space) shouldBe expected
+    verify(space).bounce(position, velocity)
 
-  it should "preserve position and velocity inside the space" in:
-    val position = P2d(20.0, 20.0)
-    val velocity = V2d(2.0, 1.0)
-    BoundaryPolicy.bounce(position, velocity, space) shouldBe (position, velocity)
+  it should "return the result provided by the space" in:
+    val space = mock(classOf[Space])
+    val expected = (P2d(100.0, 20.0), V2d(2.0, 1.0))
+    when(space.bounce(position, velocity)).thenReturn(expected)
+    BoundaryPolicy.bounce(position, velocity, space) shouldBe expected
 
-  it should "wrap positions to the opposite side" in:
-    val position = P2d(-10.0, 60.0)
-    val velocity = V2d(-2.0, 1.0)
-    BoundaryPolicy.wrap(position, velocity, space) shouldBe (P2d(90.0, 10.0), velocity)
+  "StopPolicy" should "delegate boundary handling to the space" in:
+    val space = mock(classOf[Space])
+    val expected = (P2d(0.0, 20.0), V2d.zero)
+    when(space.stop(position, velocity)).thenReturn(expected)
+    BoundaryPolicy.stop(position, velocity, space) shouldBe expected
+    verify(space).stop(position, velocity)
 
-  it should "stop an agent outside the space" in:
-    val position = P2d(-10.0, 20.0)
-    val velocity = V2d(-2.0, 1.0)
-    BoundaryPolicy.stop(position, velocity, space) shouldBe (P2d(0.0, 20.0), V2d.zero)
+  "WrapPolicy" should "wrap positions in a toroidal space" in:
+    val space = RectangularSpace(width = 100.0, height = 50.0)
+    val outsidePosition = P2d(-10.0, 60.0)
+    BoundaryPolicy.wrap(outsidePosition, velocity, space) shouldBe (P2d(90.0, 10.0), velocity)
 
-  it should "preserve an inward velocity at the boundary" in:
-    val position = P2d(0.0, 20.0)
-    val velocity = V2d(2.0, 1.0)
-    BoundaryPolicy.stop(position, velocity, space) shouldBe (position, velocity)
+  it should "fallback to bounce when used with a non-toroidal space" in:
+    val space = mock(classOf[Space])
+    val expected = (P2d(0.0, 20.0), V2d.zero)
+    when(space.bounce(position, velocity)).thenReturn(expected)
+    BoundaryPolicy.wrap(position, velocity, space) shouldBe expected
+    verify(space).bounce(position, velocity)
