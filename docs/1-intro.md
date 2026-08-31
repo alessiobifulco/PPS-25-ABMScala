@@ -1,3 +1,9 @@
+---
+title: Introduzione
+nav_order: 1
+parent: Report
+---
+
 # Introduzione
 
 Il progetto **ABMScala** si pone l'obiettivo di realizzare un framework generico
@@ -13,13 +19,13 @@ tradizionali, che descrivono il comportamento di un sistema attraverso equazioni
 globali, le simulazioni agent-based costruiscono il comportamento del sistema
 dal basso verso l'alto: ogni agente segue regole semplici e locali, e i
 comportamenti complessi emergono spontaneamente dalle interazioni tra gli agenti
-stessi. Questo fenomeno è noto come **comportmento emergente**.
+stessi.
 
 Un agente è un'entità autonoma caratterizzata da:
 
 - uno **stato** interno, che può variare nel tempo;
 - un **comportamento**, che determina come l'agente si muove e agisce;
-- la capacità di **interagire** con altri agenti nelle proprie vicinanze.
+- la capacità di **interagire** con altri agenti nelle proprie vicinanze o con l'ambiente circostante.
 
 L'ambiente è lo spazio condiviso in cui gli agenti esistono e si muovono.
 Nel framework realizzato, lo spazio è continuo e bidimensionale, con agenti
@@ -35,8 +41,9 @@ realizzato in Scala 3.
 Le astrazioni fondamentali offerte dal framework sono:
 
 - **Agent**: entità autonoma con stato generico, posizione e velocità;
-- **Behavior**: funzione pura che determina il movimento dell'agente;
-- **Interaction Rule**: regola che governa i cambi di stato tra agenti vicini;
+- **Behavior**: funzione pura che, dato il contesto locale di un agente,
+  determina le azioni che intende produrre;
+- **Interaction Rule**: regola che governa i cambi di stato tra agenti;
 - **Environment**: spazio bidimensionale continuo che contiene gli agenti.
 
 La genericità del framework è garantita dal tipo parametrico `S`, che rappresenta
