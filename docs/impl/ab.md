@@ -751,3 +751,5 @@ comportamenti con il default in prima posizione, o una regola la cui condizione 
 compilatore accetta entrambe, e il problema si manifesta solo osservando una simulazione che si comporta in modo
 inatteso. Il DSL rende alcune di queste situazioni non rappresentabili, perché la registrazione avviene attraverso i
 combinatori e l'ordinamento è a carico del builder.
+
+[Indice](0-index.md) | [Capitolo Precedente](5-design.md) | [Capitolo Successivo]()
