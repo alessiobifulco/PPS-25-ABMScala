@@ -18,18 +18,23 @@ Il Domain racchiude i concetti fondamentali del modello ad agenti. È completame
 
 ### Spazio, Posizione e Spostamento
 
-La posizione è rappresentata dalla `case class` **`P2d`** e lo spostamento dalla `case class` **`V2d`**: entrambe sono arricchite tramite **extension methods** con gli operatori algebrici (`+`, `-`, `*`, `normalized`, `length`), così da rendere il codice del dominio vicino alla notazione matematica senza introdurre gerarchie di tipi.
+La posizione è rappresentata dalla `case class` **`P2d`**, mentre il vettore di velocità o spostamento è rappresentato dalla `case class` **`V2d`**. Entrambe sono arricchite tramite **extension methods**: `P2d` supporta la somma con un vettore e la differenza fra due posizioni, che restituisce un `V2d`; `V2d` supporta invece le operazioni algebriche necessarie al movimento, tra cui somma, prodotto per scalare, calcolo della lunghezza e normalizzazione. Questa distinzione impedisce operazioni prive di significato, come la somma fra due posizioni, e mantiene il codice vicino alla notazione matematica senza introdurre gerarchie di tipi.
 
-Lo spazio della simulazione è rappresentato dal trait **`Space`**, che definisce le operazioni geometriche comuni indipendentemente dalla forma concreta del mondo. Lo spazio espone il controllo di appartenenza di una posizione e le operazioni necessarie alla gestione del movimento in prossimità del confine.
+Lo spazio della simulazione è rappresentato dal trait **`Space`**, che definisce le operazioni geometriche comuni indipendentemente dalla forma concreta del mondo. Lo spazio verifica se una posizione appartiene ai propri confini tramite `contains`, corregge le posizioni non valide tramite `clamp` e fornisce le operazioni `bounce` e `stop` per gestire il movimento in prossimità dei bordi. Queste operazioni non modificano direttamente gli agenti, ma restituiscono nuovi valori di posizione e velocità che vengono successivamente applicati dall'engine durante l'aggiornamento del tick.
 
-Le implementazioni fornite sono `RectangularSpace` e `CircularSpace`. Il primo rappresenta una regione rettangolare definita dalle sue dimensioni, mentre il secondo rappresenta una regione circolare definita da centro e raggio. La forma geometrica è descritta dall'enum `Shape`, utilizzato anche dalla GUI per determinare come disegnare il confine dell'ambiente.
+Le implementazioni fornite sono `RectangularSpace` e `CircularSpace`. Il primo rappresenta una regione rettangolare definita da larghezza e altezza, mentre il secondo rappresenta una regione circolare definita da centro e raggio. Entrambi gli spazi possono implementare il trait `Toroidal`, che fornisce l'operazione `wrap` per il trasferimento della posizione sul lato opposto dello spazio. La scelta del comportamento ai confini è invece incapsulata nell'enum `BoundaryPolicy`, che distingue fra `bounce`, `stop` e `wrap`.
 
-* **Scelte di design**:
-    * la distinzione tra i due tipi non è formale ma semantica. Impedisce di sommare due posizioni, operazione priva di significato, e rende la differenza tra posizioni un vettore
-    * il trait `Space` astrae la geometria dal resto del modello, così che l'Engine possa applicare le operazioni spaziali senza conoscere la forma concreta
-    * `Shape` costituisce una descrizione chiusa delle forme supportate e consente di utilizzare il pattern matching per gestire separatamente rettangoli e cerchi
-    * le operazioni geometriche restituiscono nuovi valori invece di modificare lo spazio, mantenendo l'immutabilità delle strutture del dominio.
-* **Casi degeneri**: la normalizzazione è definita per casi anziché con un confronto esplicito, restituendo il vettore nullo quando la lunghezza è nulla, e protegge da valori non definiti tutte le operazioni del DSL che ne fanno uso
+La forma geometrica è descritta dall'enum `Shape`, utilizzato anche dalla GUI per determinare come disegnare il confine dell'ambiente.
+
+- **Scelte di design**:
+  - la distinzione tra posizione e vettore non è soltanto formale, ma semantica: impedisce di sommare due posizioni e rende la differenza tra posizioni un vettore;
+  - il trait `Space` astrae la geometria dal resto del modello, così che l'engine possa applicare le operazioni spaziali senza conoscere la forma concreta;
+  - `BoundaryPolicy` separa la scelta del comportamento ai confini dalla geometria dello spazio;
+  - `Toroidal` rappresenta separatamente la capacità di effettuare il wrap, disponibile soltanto per gli spazi che la supportano;
+  - `Shape` costituisce una descrizione chiusa delle forme supportate e consente di utilizzare il pattern matching per gestire separatamente rettangoli e cerchi;
+  - le operazioni geometriche restituiscono nuovi valori invece di modificare lo spazio o gli agenti, mantenendo l'immutabilità delle strutture del dominio.
+
+- **Casi degeneri**: la normalizzazione di un `V2d` di lunghezza nulla restituisce il vettore nullo, evitando valori non definiti nelle operazioni del DSL e nelle simulazioni che utilizzano il calcolo delle direzioni.
 
 ![Space Diagram](img/11-space.png)
 
@@ -59,18 +64,35 @@ La `case class` **`AgentContext[S]`** è la fotografia locale del mondo su cui u
 
 ### Ambiente, Confini e Vicinato
 
-Il trait `Environment` aggrega lo spazio, la popolazione corrente, la politica di frontiera e i `Point of Interest`. Fornisce inoltre le operazioni necessarie alla ricerca dei vicini e alla creazione di nuove versioni dell'ambiente dopo l'aggiornamento della popolazione.
+Il trait `Environment` aggrega lo spazio, la popolazione corrente, la politica di frontiera e i
+`Point of Interest`. Espone inoltre le operazioni necessarie alla ricerca dei vicini e alla
+creazione di nuove versioni dell'ambiente dopo l'aggiornamento della popolazione.
 
-La gestione del movimento al confine è delegata a `BoundaryPolicy`, un enum che distingue tre comportamenti: `bounce`, che riflette il movimento dell'agente, `stop`, che lo arresta, e `wrap`, che trasferisce l'agente sul lato opposto dello spazio quando la geometria lo consente. L'uso della politica `wrap` con uno spazio non toroidale viene gestito applicando il comportamento di rimbalzo.
+La gestione del movimento in prossimità dei confini è delegata a `BoundaryPolicy`, un enum che
+distingue tre comportamenti: `bounce`, che riflette il movimento dell'agente, `stop`, che lo
+arresta, e `wrap`, che trasferisce l'agente sul lato opposto dello spazio quando la geometria
+lo consente. Se `wrap` viene applicato a uno spazio che non implementa `Toroidal`, viene
+utilizzato il comportamento di rimbalzo.
 
-La ricerca dei vicini è astratta dal trait **`NeighborStrategy`**. L'implementazione `bruteForce`, utilizzata come strategia predefinita, confronta ogni agente con tutti gli altri, mentre la strategia `grid` utilizza una griglia spaziale per ridurre il numero di agenti considerati nella ricerca. La strategia viene fornita all'Engine tramite una configurazione esplicita, senza rendere dipendente il modello da uno specifico algoritmo.
+La ricerca dei vicini è astratta dal trait **`NeighborStrategy`**, che espone le operazioni
+`prepare` e `neighborsOf`. L'object `NeighborStrategy` fornisce le implementazioni
+`bruteForce` e `grid`, oltre a una `given defaultStrategy` utilizzata quando non viene fornita
+una strategia esplicita. La strategia `bruteForce` confronta ogni agente con tutti gli altri,
+mentre `grid` costruisce un indice spaziale e limita i confronti agli agenti presenti nelle
+celle pertinenti.
 
-* **Scelte di design**:
-    * `Environment` espone il vicinato attraverso un'astrazione, separando il modello dell'ambiente dall'algoritmo di ricerca;
-    * `NeighborStrategy` costituisce un punto di estensione sostituibile, utile per adattare le prestazioni alla dimensione della popolazione;
-    * la validazione dell'ambiente verifica la compatibilità tra politica di frontiera e spazio, oltre alla posizione valida dei `Point of Interest`;
-    * gli aggiornamenti della popolazione producono un nuovo ambiente tramite `withAgents`, senza modificare quello precedente.
-
+- **Scelte di design**:
+  - `Environment` aggrega spazio, agenti, politica dei confini e `POI`, mantenendo separata la
+    descrizione dell'ambiente dalla logica delle simulazioni;
+  - `BoundaryPolicy` separa la scelta del comportamento al confine dalla geometria concreta
+    dello spazio;
+  - `NeighborStrategy` astrae l'algoritmo di ricerca dei vicini e permette di scegliere tra
+    l'implementazione `bruteForce` e quella indicizzata `grid`;
+  - l'object `NeighborStrategy` fornisce una strategia predefinita, mantenendo comunque la
+    possibilità di configurare esplicitamente l'algoritmo;
+  - `withAgents` e `withPois` restituiscono nuove versioni dell'ambiente senza modificarne
+    l'istanza originale.
+  
 ![Environment Diagram](img/12-enviroment.png)
 
 ### Point of Interest
@@ -79,7 +101,10 @@ Il `Point of Interest` è modellato dalla `case class` **`POI`** e rappresenta u
 
 La verifica di appartenenza è effettuata confrontando la distanza tra la posizione dell'agente e il centro del punto con il relativo raggio. L'Engine aggiorna a ogni tick la mappa delle permanenze, incrementando il conteggio quando l'agente rimane all'interno del POI e azzerandolo quando ne esce. La condizione `settledIn` utilizza queste informazioni per verificare se è stato raggiunto l'`activationDelay` previsto dal punto di interesse e distinguere così la sosta effettiva dal semplice attraversamento.
 
-* **Scelte di design**: il `POI` è mantenuto indipendente dalla logica degli agenti e dalla rappresentazione grafica. La sua presenza nel dominio consente al DSL di esprimere condizioni spaziali e temporali senza introdurre comportamenti specializzati nell'Engine.
+- **Scelte di design**:
+  - il `POI` è mantenuto indipendente dalla logica degli agenti e dalla rappresentazione grafica. La sua presenza nel dominio consente al DSL di esprimere condizioni spaziali e temporali senza introdurre comportamenti specializzati nell'Engine.
+  - `PoiId` è definito come opaque type, evitando di confondere l'identificatore di un `POI`
+       con un intero generico senza introdurre costi a runtime.
 
 ![Point of Interest Diagram](img/13-poi.png)
 
@@ -255,19 +280,39 @@ La GUI costituisce il livello responsabile dell'osservazione e del controllo del
 
 L'implementazione del pattern Model-View-Update è distribuita tra `Model`, `Msg`, `Mvu`, `State` e i componenti Swing. `Model` è una struttura dati immutabile che contiene la configurazione, lo stato corrente della simulazione e l'indicazione se l'esecuzione è attiva.
 
-L'enum **`Msg`** rappresenta gli eventi gestiti dalla GUI: avanzamento di un tick, cambio dello stato di esecuzione e riavvio della simulazione. `Mvu.update` traduce ciascun messaggio in una trasformazione `State[Model[S], Unit]`. La trasformazione viene applicata dalla `SimulationWindow`, che sostituisce il modello corrente e aggiorna la rappresentazione dei pannelli.
+L'enum **`Msg`** rappresenta gli eventi gestiti dalla GUI: avanzamento di un tick, cambio dello stato di esecuzione e riavvio della simulazione. `Mvu.update` traduce 
+ciascun messaggio in una trasformazione `State[Model[S], Unit]`. La trasformazione viene applicata dalla `SimulationWindow` tramite il metodo `dispatch`, che
+rappresenta l'unico punto in cui il modello viene sostituito. Successivamente `refresh` aggiorna
+i componenti grafici sulla base del nuovo modello.
 
-La `case class` **`State`** rappresenta una computazione che riceve uno stato e restituisce lo stato aggiornato insieme a un valore risultato. La type class **`Monad`** fornisce le operazioni `unit`, `map` e `flatMap`, permettendo di comporre trasformazioni successive senza gestire esplicitamente il passaggio del modello.
+La `case class` **`State[S, A]`** rappresenta una computazione che riceve uno stato di tipo `S`
+e restituisce uno stato aggiornato insieme a un valore risultato di tipo `A`. L'object `State`
+fornisce una data instance della type class **`Monad`** per questo costruttore di tipo. La
+`Monad` espone le operazioni `unit`, `map` e `flatMap`, permettendo di comporre trasformazioni
+successive senza gestire esplicitamente il passaggio del modello.
 
 ![Model-View-Update Diagram](img/14-gui-mvu.png)
 
 ### Menu e Finestra di Simulazione
 
-Il **`MainMenu`** rappresenta il punto di ingresso dell'applicazione e presenta le simulazioni disponibili attraverso oggetti `SimulationOption`. La selezione di un'opzione nasconde il menu e apre la finestra della simulazione; alla chiusura della finestra, una callback permette di tornare al menu principale.
+Il **`MainMenu`** rappresenta il punto di ingresso dell'applicazione e presenta le simulazioni
+disponibili attraverso oggetti `SimulationOption`. La selezione di un'opzione nasconde il menu
+e apre la finestra della simulazione; alla chiusura della finestra, una callback permette di
+tornare al menu principale.
 
-La **`SimulationWindow`** coordina i componenti Swing e il ciclo di aggiornamento. Contiene i pulsanti per tornare al menu, interrompere o riprendere l'esecuzione e riavviare la simulazione. Un timer a intervallo fisso genera periodicamente il messaggio `Tick`, che viene inviato al ciclo MVU. La finestra aggiorna quindi il modello e ridisegna i pannelli a partire dal nuovo valore prodotto.
+La **`SimulationWindow`** coordina i componenti Swing e il ciclo di aggiornamento della
+simulazione. Contiene i pulsanti per interrompere o riprendere l'esecuzione e per riavviare la
+simulazione. Un timer a intervallo fisso genera periodicamente il messaggio `Tick`, mentre i
+pulsanti producono i messaggi `ToggleRun` e `RestartAndRun`.
 
-* **Scelte di design**: la funzione di dispatch è l'unico punto in cui il modello viene riassegnato. Timer e pulsanti si limitano a produrre messaggi, per cui il flusso resta unidirezionale anche in un contesto a callback
+I messaggi vengono inviati a `Mvu.update`, che restituisce una trasformazione
+`State[Model[S], Unit]`. La trasformazione viene applicata al modello corrente e, al termine,
+`SimulationWindow.dispatch` riassegna il nuovo modello e aggiorna `SimulationPanel` e
+`StatisticsPanel`.
+
+- **Scelte di design**: la funzione `dispatch` è l'unico punto in cui il modello viene
+  riassegnato. Timer e pulsanti si limitano a produrre messaggi, per cui il flusso resta
+  unidirezionale anche in un contesto basato su callback.
 
 ![MVU Dispatch Sequence](img/16-mvu.png)
 
