@@ -364,4 +364,4 @@ Sul lato grafico, `SimulationWindow` coordina il ciclo di esecuzione, `Mvu` gest
 
 Il risultato è una GUI riutilizzabile per simulazioni con stati, geometrie e punti di interesse differenti, senza duplicare la logica dell'Engine e senza imporre vincoli di ereditarietà ai tipi definiti dall'utente.
 
-[Indice](0-index.md) | [Capitolo Precedente](5-design.md) | [Capitolo Successivo](7-testing.md)
+[Indice](../0-index.md) | [Capitolo Precedente](../5-design.md) | [Capitolo Successivo](../7-testing.md)
