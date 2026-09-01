@@ -363,3 +363,5 @@ Le componenti realizzate collaborano mantenendo separate le responsabilità. `Sp
 Sul lato grafico, `SimulationWindow` coordina il ciclo di esecuzione, `Mvu` gestisce le trasformazioni del modello, `SimulationPanel` rappresenta la scena e `StatisticsPanel` fornisce una lettura quantitativa dell'evoluzione. Le type class `Renderable` e `POIRenderable` mantengono la rappresentazione indipendente dal dominio applicativo.
 
 Il risultato è una GUI riutilizzabile per simulazioni con stati, geometrie e punti di interesse differenti, senza duplicare la logica dell'Engine e senza imporre vincoli di ereditarietà ai tipi definiti dall'utente.
+
+[Indice](0-index.md) | [Capitolo Precedente](5-design.md) | [Capitolo Successivo](7-testing.md)
