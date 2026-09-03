@@ -57,10 +57,8 @@ Per l'interfaccia grafica è stato adottato il pattern **Model-View-Update (MVU)
   ogni scadenza del timer sono tradotte in un valore dell'`enum` `Msg`, e l'aggiornamento è espresso come **monade di
   stato**, così che più trasformazioni possano essere composte mantenendo implicito il passaggio del modello
 
-La scelta di MVU al posto di MVC è motivata dal fatto che il **flusso è unidirezionale**: nessun componente grafico
-modifica direttamente lo stato, ma tutti si limitano a emettere messaggi, e l'unico punto in cui il modello viene
-riassegnato è la funzione di dispatch. Questo riduce le incoerenze tipiche delle interfacce a callback e rende la
-logica dell'interfaccia collaudabile senza istanziare alcun componente Swing.
+La scelta di MVU al posto di MVC è motivata dal intenzione di adottare un approccio e struttura diversa da quella
+classica, MVC, già usata in altri corsi.
 
 I componenti Swing conservano soltanto lo stato locale necessario alla visualizzazione: il `SimulationPanel` mantiene
 il modello da ridisegnare, mentre il `StatisticsPanel` mantiene lo storico delle distribuzioni, i dati sulle
@@ -139,18 +137,30 @@ L'intero progetto è stato sviluppato seguendo principi di programmazione funzio
 
 * **Funzioni pure**: la decisione di un agente e l'avanzamento della simulazione sono funzioni prive di effetti
   collaterali. Un comportamento non muove un agente, ma restituisce l'intenzione di muoverlo sotto forma di valore
-  `Action`, che il motore interpreta separatamente
+  `Action`, che il motore interpreta separatamente. Nel motore non compare alcun ciclo imperativo: nascite e morti,
+  recapito dei messaggi, permanenze sui punti di interesse e composizione delle velocità sono tutti accumuli espressi
+  con `foldLeft`
 
 * **Higher-order function e composizione**: comportamenti e condizioni sono semplici alias di funzione
   (`ActionSource`, `Condition`), il che rende la composizione gratuita. I combinatori `to`, `orElse`, `onlyIf`, `and`
-  e `or` costruiscono comportamenti e predicati complessi a partire da elementi elementari, senza gerarchie di classi
+  e `or` costruiscono comportamenti e predicati complessi a partire da elementi elementari, senza gerarchie di classi.
+  Anche la popolazione iniziale è descritta da funzioni (`Int => S` e `Int => P2d`), valutate dal `SimulationBuilder`
+  al momento della costruzione
 
-* **Type class**: `Continuous` rende idoneo alle regole continue un qualunque tipo di stato, e `Renderable` ne
-  definisce l'aspetto grafico, entrambi senza imporre vincoli di ereditarietà al tipo dell'utente. `NeighborStrategy`
-  è fornita come **given instance** di default, così che sia configurabile ma mai obbligatoria
+* **Extension method e metodi infix**: le operazioni sono aggiunte ai tipi dall'esterno, senza wrapper e senza
+  ereditarietà. È il meccanismo con cui `P2d` e `V2d` espongono l'algebra vettoriale, `Agent` le proprie
+  trasformazioni e il DSL le proprie parole chiave: essendo `infix`, `whenAgentIs`, `iff`, `withBoundary` e `withOne`
+  si scrivono senza punto né parentesi, e la dichiarazione risultante si legge come una frase
 
-* **Opaque type**: `AgentId` e `Chance` impediscono di confondere un identificatore o una probabilità con un numero
-  qualsiasi, senza introdurre un wrapper a runtime, e concentrano la validazione nel punto di costruzione
+* **Type class**: `Continuous` rende idoneo alle regole continue un qualunque tipo di stato, mentre `Renderable` e
+  `POIRenderable` ne definiscono l'aspetto grafico, tutte senza imporre vincoli di ereditarietà al tipo dell'utente.
+  `Monad` è astratta su un costruttore di tipo (`Monad[M[_]]`) e riceve la propria istanza da `State`.
+  `NeighborStrategy` e `POIRenderable` sono fornite come **given instance** di default, così da restare configurabili
+  ma mai obbligatorie
+
+* **Opaque type**: `AgentId`, `PoiId` e `Chance` impediscono di confondere un identificatore o una probabilità con un
+  numero qualsiasi, senza introdurre un wrapper a runtime. `Chance` concentra inoltre nel punto di costruzione la
+  verifica che il valore appartenga all'intervallo ammesso
 
 * **Context function**: i blocchi del DSL sono funzioni con parametro di contesto (`Builder[S] ?=> Unit`), meccanismo
   che consente alle dichiarazioni annidate di registrarsi presso il builder corretto senza che l'utente debba mai
@@ -160,8 +170,8 @@ L'intero progetto è stato sviluppato seguendo principi di programmazione funzio
   comporre più trasformazioni con `flatMap` e mantenendo funzionale la logica di un componente per sua natura
   imperativo
 
-* **Enum e pattern matching esaustivo**: azioni, messaggi, politiche di frontiera ed eventi di memoria sono insiemi
-  chiusi, il che consente al compilatore di verificare che ogni caso sia gestito e trasforma in errori di compilazione
-  quelle che sarebbero altrimenti omissioni silenziose
+* **Enum e pattern matching esaustivo**: azioni, messaggi, politiche di frontiera, eventi di memoria e forme dello
+  spazio sono insiemi chiusi, il che consente al compilatore di verificare che ogni caso sia gestito e trasforma in
+  errori di compilazione quelle che sarebbero altrimenti omissioni silenziose
 
 [Indice](0-index.md) | [Capitolo Precedente](3-analysis.md) | [Capitolo Successivo](5-design.md)

@@ -29,9 +29,9 @@ realizzata nello Sprint 2, oggi troppo elementare per mostrare un fenomeno inter
 infine introdotta la raccolta di statistiche per tick e la loro visualizzazione, per osservare
 i fenomeni emergenti senza doverli dedurre dal solo rendering.
 
-La GUI viene inoltre rifattorizzata secondo il pattern MVU e la gestione dello stato viene
-espressa tramite la `State` monad. Il pannello statistico mostra la distribuzione degli stati,
-le transizioni, lo storico temporale e la densità spaziale degli agenti.
+Il pannello statistico, integrato nella `SimulationWindow` secondo l'architettura MVU già in
+uso, mostra la distribuzione degli stati, le transizioni, lo storico temporale e la densità
+spaziale degli agenti.
 
 ## Deadline
 
@@ -41,23 +41,23 @@ La scadenza dello sprint è il 28/08/2026.
 
 | Product Backlog Item                       | Sprint Task                                                                | Volontario | Stima iniziale (h) | Ore rimanenti a fine Sprint 4 |
 |--------------------------------------------|----------------------------------------------------------------------------|------------|--------------------|-------------------------------|
-| **Agent Memory**                           | Implementazione di `Memory` con capacità limitata                          | AB         | 3                  | 0                             |
-|                                            | Definizione di `Belief` e `MemoryEvent`                                    | AB         | 2                  | 0                             |
-|                                            | `Action` di memoria: registrazione e scambio fra `Agent`                   | AB         | 2                  | 0                             |
-|                                            | `Condition` di regola basate sulla `Memory`                                | AB         | 2                  | 0                             |
-| **Point of Interest**                      | Collegamento dei `POI` al ciclo dell'engine                                | AB         | 2                  | 0                             |
-|                                            | Tracciamento della `Residency` degli `Agent` nei `POI`                     | AB         | 2                  | 0                             |
+| **Agent Memory**                           | Implementazione di `Memory` con capacità limitata                          | AB         | 2                  | 0                             |
+|                                            | Definizione di `Belief` e `MemoryEvent`                                    | AB         | 1                  | 0                             |
+|                                            | `Action` di memoria: registrazione e scambio fra `Agent`                   | AB         | 1.5                | 0                             |
+|                                            | `Condition` di regola basate sulla `Memory`                                | AB         | 1.5                | 0                             |
+| **Point of Interest**                      | Collegamento dei `POI` al ciclo dell'engine                                | AB         | 1.5                | 0                             |
+|                                            | Tracciamento della `Residency` degli `Agent` nei `POI`                     | AB         | 1.5                | 0                             |
 |                                            | `Condition` di regola basate sui `POI`                                     | AB / SF    | 3                  | 0                             |
-| **Refactoring del dominio**                | Unificazione di `Behavior` e `InteractionRule` con matcher esplicito       | AB         | 2                  | 0                             |
-|                                            | Rimozione di `Decision` e `Choice`                                         | AB         | 1.5                | 0                             |
-|                                            | Riscrittura di `Action` come enum                                          | AB         | 1.5                | 0                             |
-|                                            | Rimozione di `ActionHandler` e riorganizzazione dell'engine in fasi        | AB         | 2                  | 0                             |
-|                                            | Allineamento di `Chance` e `Memory` alle convenzioni del progetto          | AB         | 1                  | 0                             |
-| **Refactoring del DSL**                    | Introduzione di `Transition` per la costruzione delle `InteractionRule`    | AB         | 2                  | 0                             |
-|                                            | Rimozione dei builder di singola regola                                    | AB         | 1                  | 0                             |
-|                                            | Uniformazione della sintassi fra `Behavior` e `InteractionRule`            | AB         | 1.5                | 0                             |
-|                                            | Adeguamento delle simulazioni esistenti alla nuova sintassi                | AB         | 1.5                | 0                             |
-| **Estensione del DSL**                     | Riscrittura in forma infissa della configurazione iniziale                 | AB         | 4                  | 0                             |
+| **Refactoring del dominio**                | Unificazione di `Behavior` e `InteractionRule` con matcher esplicito       | AB         | 1.5                | 0                             |
+|                                            | Rimozione di `Decision` e `Choice`                                         | AB         | 1                  | 0                             |
+|                                            | Riscrittura di `Action` come enum                                          | AB         | 1                  | 0                             |
+|                                            | Rimozione di `ActionHandler` e riorganizzazione dell'engine in fasi        | AB         | 1.5                | 0                             |
+|                                            | Allineamento di `Chance` e `Memory` alle convenzioni del progetto          | AB         | 0.5                | 0                             |
+| **Refactoring del DSL**                    | Introduzione di `Transition` per la costruzione delle `InteractionRule`    | AB         | 1.5                | 0                             |
+|                                            | Rimozione dei builder di singola regola                                    | AB         | 0.5                | 0                             |
+|                                            | Uniformazione della sintassi fra `Behavior` e `InteractionRule`            | AB         | 1                  | 0                             |
+|                                            | Adeguamento delle simulazioni esistenti alla nuova sintassi                | AB         | 1                  | 0                             |
+| **Estensione del DSL**                     | Riscrittura in forma infissa della configurazione iniziale                 | AB         | 3                  | 0                             |
 |                                            | Configurazione DSL per ambiente, popolazione, percezione e `POI`           | SF         | 4                  | 0                             |
 | **Statistiche**                            | Raccolta delle statistiche per tick nel `StatisticsPanel`                  | SF         | 5                  | 0                             |
 |                                            | Visualizzazione della distribuzione degli stati e dello storico            | SF         | 3                  | 0                             |
@@ -66,21 +66,21 @@ La scadenza dello sprint è il 28/08/2026.
 |                                            | Integrazione del pannello statistico nella `SimulationWindow`              | SF         | 3                  | 0                             |
 |                                            | Refactoring del raggruppamento delle statistiche e delle linee del grafico | SF         | 2                  | 0                             |
 | **Simulazione 1: revisione ed estensione** | Introduzione dello stato di immunità temporanea                            | AB         | 1                  | 0                             |
-|                                            | Contagio probabilistico e velocità differenziate per stato                 | AB         | 1                  | 0                             |
+|                                            | Contagio probabilistico e velocità differenziate per stato                 | AB         | 0.5                | 0                             |
 |                                            | Taratura dei parametri                                                     | AB         | 1                  | 0                             |
-| **Simulazione 3: Formiche**                | Logica di ricerca del cibo e ritorno al nido                               | AB         | 2                  | 0                             |
-|                                            | Propagazione delle posizioni note fra `Agent`                              | AB         | 2                  | 0                             |
-| **Simulazione 4: Propagazione allarme**    | Logica di allarme, fuga e uscita dalla simulazione                         | AB         | 2                  | 0                             |
-|                                            | Propagazione della notizia fra `Agent` vicini                              | AB         | 2                  | 0                             |
+| **Simulazione 3: Formiche**                | Logica di ricerca del cibo e ritorno al nido                               | AB         | 1.5                | 0                             |
+|                                            | Propagazione delle posizioni note fra `Agent`                              | AB         | 1.5                | 0                             |
+| **Simulazione 4: Propagazione allarme**    | Logica di allarme, fuga e uscita dalla simulazione                         | AB         | 1.5                | 0                             |
+|                                            | Propagazione della notizia fra `Agent` vicini                              | AB         | 1.5                | 0                             |
 |                                            | Taratura dei tempi di allarme e di rientro                                 | AB         | 1                  | 0                             |
-| **Test**                                   | Test delle entità di dominio riprogettate                                  | AB         | 2                  | 0                             |
-|                                            | Test delle `Condition` di `Memory` e di `POI`                              | AB         | 2                  | 0                             |
+| **Test**                                   | Test delle entità di dominio riprogettate                                  | AB         | 1.5                | 0                             |
+|                                            | Test delle `Condition` di `Memory` e di `POI`                              | AB         | 1.5                | 0                             |
 |                                            | Refactor dei test di dominio                                               | SF         | 2                  | 0                             |
 |                                            | Test di `Model`, `Mvu`, `State`, `Monad` e messaggi della GUI              | SF         | 4                  | 0                             |
 |                                            | Test di `POI`, `EnvironmentBuilder`, `Renderable` e `POIRenderable`        | SF         | 3                  | 0                             |
 | **Documentazione**                         | ScalaDoc sulle astrazioni introdotte e riprogettate                        | AB / SF    | 4                  | 0                             |
 |                                            | Aggiornamento del report                                                   | AB / SF    | 4                  | 0                             |
-| **Totale**                                 |                                                                            |            | **90**             | **0**                         |
+| **Totale**                                 |                                                                            |            | **77**             | **0**                         |
 
 ## Divisione del lavoro
 
@@ -100,14 +100,13 @@ La scadenza dello sprint è il 28/08/2026.
 - I `POI` sono percepibili dagli `Agent` e utilizzabili come `Condition` di regola dal DSL.
 - `Behavior` e `InteractionRule` espongono il proprio criterio di applicabilità come dato
   ispezionabile, e l'engine le risolve con lo stesso meccanismo.
-- Ogni costrutto esposto dal DSL è esercitato da almeno una simulazione.
+- Ogni famiglia di costrutti esposta dal DSL è esercitata da almeno una simulazione.
 - La sezione di configurazione iniziale delle simulazioni è espressa nella stessa forma infissa
   del resto del DSL.
 - Le simulazioni 1 e 2 sono state aggiornate per utilizzare il nuovo DSL per l'`Environment` e
   producono lo stesso comportamento osservabile di prima del refactoring.
 - Le simulazioni *Ant Colony* e *Alarm Spreading* sono avviabili dal menu e mostrano il
   fenomeno emergente atteso.
-- La GUI utilizza il pattern MVU e la `State` monad per la gestione delle transizioni del modello.
 - Le statistiche della simulazione in corso sono raccolte a ogni tick e osservabili a schermo,
   includendo distribuzione degli stati, storico temporale, transizioni e densità spaziale.
 - ScalaDoc presente su tutte le astrazioni introdotte.
@@ -139,7 +138,7 @@ interessante da osservare. Le statistiche raccolte a ogni tick e mostrate a sche
 infine di seguire l'andamento dei fenomeni senza doverlo dedurre dal solo rendering.
 
 Il `StatisticsPanel`, integrato nella `SimulationWindow` secondo l'architettura MVU già introdotta nello Sprint 3,
-mostra distribuzione degli stati, transizioni, storico temporale e densità spaziale, rendendo osservabili anche 
+mostra distribuzione degli stati, transizioni, storico temporale e densità spaziale, rendendo osservabili anche
 gli aspetti quantitativi delle simulazioni.
 
 Una parte consistente dello sprint non è visibile allo stakeholder: il refactoring del dominio
@@ -166,7 +165,8 @@ consegnare un framework con un dominio coerente. Le ore rimanenti a fine sprint 
 - La revisione del modo in cui le regole vengono registrate ha eliminato per costruzione la
   classe di difetti osservata nello Sprint 3, dove una regola poteva essere registrata prima di
   essere completamente configurata.
-- Il criterio "ogni costrutto esposto dal DSL deve essere esercitato da almeno una simulazione"
+- Il criterio "ogni famiglia di costrutti esposta dal DSL deve essere esercitata da almeno una
+  simulazione"
   si è rivelato utile come regola di decisione: ha permesso di risolvere rapidamente diversi
   dubbi di design che altrimenti sarebbero rimasti aperti, e ha motivato la rimozione di un
   punto di estensione introdotto nello Sprint 3 e mai usato.

@@ -13,18 +13,18 @@ comportamento osservabile emerge dalla composizione di molte unità indipendenti
 agenti, comportamenti, regole, motore di aggiornamento), è stato necessario verificare sia
 la correttezza delle singole unità sia quella delle loro collaborazioni.
 
-I test sono stati scritti con approccio **Test Driven Development (TDD)**, coerentemente con la
-*definition of done* adottata dal team, che considera un task concluso solo quando i test
-relativi alla funzionalità sono presenti e passano in CI. Ogni push sul repository attiva la
-compilazione e l'esecuzione dell'intera suite tramite GitHub Actions.
+I test sono stati scritti in parallelo all'implementazione delle funzionalità, coerentemente
+con la *definition of done* adottata dal team, che considera un task concluso solo quando i
+test relativi alla funzionalità sono presenti e passano in CI. Ogni push sul repository attiva
+la compilazione e l'esecuzione dell'intera suite tramite GitHub Actions.
 
 La distinzione tra i due livelli di test segue il criterio presentato a lezione: un test è
 unitario quando verifica una singola unità di comportamento, lo fa rapidamente e lo fa in
 isolamento rispetto alle altre unità e agli altri test; quando una di queste tre condizioni
-non è soddisfatta, il test ricade nella categoria dei test di integrazione. Nel progetto la
-verifica delle collaborazioni è stata mantenuta a livello di integrazione e non di sistema:
-i test isolano di volta in volta le sole collaborazioni necessarie a verificare un
-comportamento multi-componente.
+non è soddisfatta, il test ricade nella categoria dei test di integrazione. I test di
+integrazione isolano di volta in volta le sole collaborazioni necessarie a verificare un
+comportamento multi-componente, sostituendo con test double le dipendenze che non sono
+oggetto della verifica.
 
 La scelta di modellare il dominio con strutture **immutabili** e funzioni pure ha semplificato
 notevolmente questa attività: non esistendo stato globale condiviso, ogni caso di test può
@@ -41,8 +41,9 @@ Di ScalaTest sono state sfruttate principalmente:
 - lo stile **`AnyFlatSpec`**, che permette di esprimere ogni caso di test come una frase
   (`"A memory" should "start with no beliefs"`), rendendo il nome del test una descrizione
   leggibile della condizione verificata;
-- i **matchers** (`shouldBe`, `should have size`, `should contain` per i confronti su
-  valori in virgola mobile), che rendono le asserzioni più espressive dei semplici `assert`;
+- i **matchers** (`shouldBe`, `should have size`, `should contain`) e il matcher di tolleranza
+  `+-` per i confronti su valori in virgola mobile, che rendono le asserzioni più espressive
+  dei semplici `assert`;
 - il costrutto `an[...] should be thrownBy`, usato per verificare il rispetto delle
   precondizioni dei costruttori.
 
@@ -103,6 +104,22 @@ dell'integrazione alle sole collaborazioni di interesse.
 funzioni `init` e `update` del ciclo Model-View-Update producano il modello atteso in risposta
 ai messaggi ricevuti e che lo stato non avanzi quando la simulazione è in pausa.
 
+## Test di accettazione
+
+Le funzionalità che riguardano direttamente l'esperienza d'uso sono state verificate eseguendo
+le quattro simulazioni di esempio e osservandone il comportamento a schermo, secondo i
+requisiti di utente raccolti in analisi: l'avvio di una simulazione dal menu e il ritorno alla
+scelta, la sospensione e la ripresa dell'esecuzione, il riavvio dalla configurazione iniziale,
+la distinguibilità degli agenti per colore in base al proprio stato, la comparsa dei punti di
+interesse e dei confini dello spazio, e la sospensione della sola raccolta delle statistiche
+senza interruzione della simulazione. La verifica è stata ripetuta alla chiusura di ogni
+sprint, in sede di Sprint Review, sulle simulazioni disponibili in quel momento.
+
+Nella stessa sede è stato verificato il requisito di prestazioni: le simulazioni sono state
+eseguite con popolazioni dell'ordine delle centinaia di agenti, controllando che
+l'aggiornamento del tick e il conseguente ridisegno restassero allineati all'intervallo del
+timer di aggiornamento e che l'esecuzione prolungata non producesse rallentamenti progressivi.
+
 ## Grado di copertura
 
 La suite è composta da **29 classi di test** per un totale di **235 casi di test**, che
@@ -124,14 +141,15 @@ di dimensioni o raggi non positivi per gli spazi, il rifiuto di una capacità di
 positiva, la normalizzazione del vettore nullo, il comportamento di un agente privo di vicini e
 la posizione esattamente sul confine dello spazio o sul bordo del raggio di percezione.
 
-Restano fuori dalla verifica automatica i componenti Swing di sola presentazione
-(`SimulationWindow`, `MainMenu`, `SimulationPanel`, `StatisticsPanel`) e le simulazioni di
-esempio (`Epidemic`, `AlarmSpreading`, `AntColony`, `OpinionDynamics`, `Main`): i primi
-contengono l'unico stato mutabile del sistema e sono stati validati manualmente durante
-l'esecuzione, mentre le seconde costituiscono programmi d'uso del DSL, le cui costruzioni sono
-già coperte dalle suite del livello DSL. Le classi effettivamente sostituibili da test double
-(`Renderable`, `POIRenderable`, `Msg`, `SimulationOption`) sono invece testate, così da coprire
-la parte di logica della GUI indipendente dal disegno.
+La verifica automatica si ferma dove comincia il disegno. I componenti Swing di sola
+presentazione (`SimulationWindow`, `MainMenu`, `SimulationPanel`, `StatisticsPanel`)
+contengono stato mutabile e dipendono direttamente dal toolkit grafico, e sono stati verificati
+con i test di accettazione descritti sopra; le parti della GUI indipendenti dal disegno
+(`Renderable`, `POIRenderable`, `Msg`, `SimulationOption`) sono invece coperte da test
+automatici. Le simulazioni di esempio (`Epidemic`, `AlarmSpreading`, `AntColony`,
+`OpinionDynamics`, `Main`) sono programmi d'uso del DSL, le cui costruzioni sono già coperte
+dalle suite del livello DSL: quello che le riguarda in proprio, ovvero il fenomeno emergente
+atteso, è per sua natura oggetto di osservazione e non di asserzione.
 
 L'esecuzione regolare della suite in CI durante tutto il ciclo di sviluppo ha garantito
 correttezza logica, robustezza rispetto agli input non validi e assenza di regressioni dopo

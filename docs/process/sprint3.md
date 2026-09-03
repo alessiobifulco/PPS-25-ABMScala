@@ -53,7 +53,7 @@ La scadenza dello sprint è il 08/08/2026.
 |                             | Migrazione di *Opinion Dynamics* sulla nuova View                                       | SF         | 0.5                | 0                             |
 | **Documentazione**          | ScalaDoc sulle feature del DSL (builder, syntax, impliciti)                             | AB         | 2                  | 0                             |
 |                             | ScalaDoc sulla `State` monad, `POI` e componenti della View                             | SF         | 2                  | 0                             |
-| **Totale**                  |                                                                                         |            | **41**             | **0**                         |
+| **Totale**                  |                                                                                         |            | **43**             | **0**                         |
 
 ## Divisione del lavoro
 
@@ -100,7 +100,7 @@ vocabolario, e il motore è stato adattato di conseguenza. *Epidemic* è stata e
 stato di morte e con il decadimento degli agent, che ne è il primo utilizzatore concreto e
 rende la simulazione visibilmente più interessante. In coda è stata condotta una revisione del
 modello di dominio, che ha sostituito la struttura ad albero con cui i comportamenti erano
-inizialmente descritti con una rappresentazione a elenco di alternative, ciò è dovuto al fatto 
+inizialmente descritti con una rappresentazione a elenco di alternative, ciò è dovuto al fatto
 che l'idea iniziale era di imitare un albero decisionale ciò però non comportava alcun vantaggio quindi si è scelto di deviare verso una solzuione
 più diretta da costruire dal DSL. Questo lavoro è stato assorbito dal margine che il team riserva in fase di
 planning e non ha generato debito.
