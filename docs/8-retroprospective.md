@@ -61,23 +61,24 @@ stato dell'agente senza vincoli di ereditarietà. Queste possibilità non erano 
 e averle comprese in corso d'opera ha portato a deviare dal design iniziale più di quanto
 sarebbe accaduto partendo con la stessa consapevolezza.
 
-Per **SF**, la difficoltà principale è stata collegare un modello immutabile a una libreria grafica imperativa come Swing.
-Il pattern MVU ha fornito una struttura per separare modello, aggiornamento e visualizzazione, ma la sua applicazione ha
+Per **SF**, la difficoltà principale è stata collegare un modello immutabile a una libreria grafica imperativa come `Swing`.
+Il pattern `MVU` ha fornito una struttura per separare modello, aggiornamento e visualizzazione, ma la sua applicazione ha
 richiesto di gestire con attenzione il confine tra lo stato immutabile della simulazione e lo stato locale necessario ai
-componenti grafici. L’introduzione della `State` monad ha permesso di rappresentare le trasformazioni del modello come
+componenti grafici. L’introduzione della `State monad` ha permesso di rappresentare le trasformazioni del modello come
 computazioni componibili, mantenendo la logica di aggiornamento separata dalla gestione della finestra e dei pannelli.
 
 Una seconda difficoltà ha riguardato la progettazione delle astrazioni spaziali e della ricerca dei vicini. Il sistema
 doveva supportare geometrie diverse, politiche di confine differenti e algoritmi alternativi per il calcolo dei vicini
-senza vincolare l’Engine a una particolare implementazione. È stato quindi necessario coordinare `Space`, `BoundaryPolicy`,
+senza vincolare l’`Engine` a una particolare implementazione. È stato quindi necessario coordinare `Space`, `BoundaryPolicy`,
 `Toroidal`, `Environment` e `NeighborStrategy`, mantenendo separate la geometria dell’ambiente, la gestione del movimento e
 la ricerca degli agenti vicini.
 
-Infine, l’integrazione dei `Point of Interest` ha richiesto di coordinare il modello di dominio, l’Engine, il DSL e la GUI.
-I POI dovevano rimanere elementi passivi dell’ambiente, ma al tempo stesso essere utilizzabili dalle condizioni del DSL,
-tenere conto della permanenza degli agenti e risultare visibili nell’interfaccia grafica. La definizione di `POI` e `Residency`
-ha permesso di separare la regione spaziale dai contatori di permanenza associati agli agenti, rendendo possibile distinguere il
-semplice attraversamento dalla permanenza prolungata.
+Infine, una difficoltà significativa è stata imparare a utilizzare insieme le funzionalità avanzate di Scala 3
+e il paradigma funzionale. Ho dovuto comprendere il funzionamento di `context function`, `type class`, `given` e
+`opaque type` per mantenere il framework generico e facilmente configurabile. Inoltre, l’uso di strutture immutabili
+ha richiesto di creare nuovi valori a ogni aggiornamento, invece di modificare direttamente quelli esistenti. Anche se 
+inizialmente questo approccio ha aumentato la complessità del lavoro, ha portato a un codice più modulare, riutilizzabile 
+e facile da verificare.
 
 ## Stato attuale
 
