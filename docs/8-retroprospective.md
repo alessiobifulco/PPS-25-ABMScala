@@ -35,10 +35,8 @@ taratura dei parametri delle simulazioni è stata sottostimata sia nello Sprint 
 Sprint 4, perché ottenere un fenomeno emergente leggibile a schermo richiede iterazioni che non
 sono scrittura di codice e che in pianificazione tendono a non essere contate. La seconda
 riguarda la **validazione**: in più occasioni difetti puramente comportamentali sono arrivati
-fino all'esecuzione ed è stata l'osservazione a schermo, non la test suite, a rivelarli. Il
-caso più significativo è stato un blocco di configurazione del DSL che scriveva su un builder
-diverso da quello poi usato per costruire, e che produceva una finestra vuota senza alcun
-errore. La pratica di riservare un margine in fase di planning si è invece rivelata la scelta
+fino all'esecuzione ed è stata l'osservazione a schermo, non la test suite, a rivelarli. 
+La pratica di riservare un margine in fase di planning si è invece rivelata la scelta
 più utile del processo: ha assorbito per intero il refactoring del dominio dello Sprint 3, non
 previsto a specifica.
 
@@ -116,10 +114,7 @@ stretto, si è passati per una fase intermedia in cui i test venivano scritti in
 all'implementazione, e si è tornati al TDD nella fase finale. La fase intermedia è quella che
 ha prodotto i risultati peggiori, ed è la stessa in cui i difetti del DSL sono arrivati fino
 all'esecuzione: quando il test segue il codice invece di precederlo, tende a legarsi ai
-dettagli implementativi e a non coprire i casi che il codice non aveva già previsto. Il ritorno
-al TDD nello Sprint 4 ha reso il refactoring del dominio condotto nell'ultimo sprint e quindi
-il più rischioso dell'intero progetto verificabile passo per passo, consentendo di
-confermare che le simulazioni esistenti mantenessero lo stesso comportamento osservabile.
+dettagli implementativi e a non coprire i casi che il codice non aveva già previsto..
 
 Mockito è stato usato per sostituire le dipendenze e verificare in isolamento le unità di base,
 mentre `scoverage`, configurato fin dallo Sprint 1, è servito come strumento diagnostico per
@@ -158,17 +153,15 @@ girino sullo stesso motore.
 L'adozione di Scala 3 e del paradigma funzionale ha inciso profondamente sul design. Le
 strutture immutabili hanno eliminato per costruzione un'intera classe di difetti e hanno reso
 ogni componente verificabile in isolamento, mentre le context function e le type class hanno
-permesso di ottenere un DSL leggibile senza rinunciare alla genericità. Il prezzo pagato è
-stato la curva di apprendimento del linguaggio, che ha reso alcune scelte iniziali più incerte
-di quanto sarebbero state con maggiore familiarità.
+permesso di ottenere un DSL leggibile senza rinunciare alla genericità.
 
 Il bilancio complessivo è positivo. Il framework consegnato copre tutti i requisiti principali
 e buona parte di quelli opzionali, e il dominio è più coerente alla fine del progetto di quanto
 lo fosse a metà, grazie al refactoring condotto nell'ultimo sprint. Resta la consapevolezza di
 aver impiegato più tempo del necessario in alcune fasi: la ricerca del design iniziale, le
 riscritture della sintassi del DSL e la taratura dei parametri hanno assorbito ore che una
-pianificazione più consapevole avrebbe potuto contenere. È però anche il tipo di costo che
-difficilmente si evita quando si progetta un'astrazione nuova, e l'esperienza acquisita nel
-riconoscerlo è essa stessa un risultato del progetto.
+pianificazione più consapevole avrebbe potuto contenere. Ciò è principalmente dovuto al fatto che 
+il sistema fosse un astrazione partendo da zero senza una possiible base da seguire, e l'esperienza 
+acquisita da tale sfida è essa stessa un risultato del progetto.
 
 [Indice](0-index.md) | [Capitolo Precedente](7-testing.md)
