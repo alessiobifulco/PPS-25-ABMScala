@@ -17,5 +17,6 @@ funzionale e i costrutti di Scala 3 adottati siano stati applicati concretamente
 progetto.
 
 * [Implementazione - AB](impl/ab.md)
+* [Implementazione - SF](impl/sf.md)
 
-[Indice](0-index.md) | [Capitolo Precedente](5-design.md) | [Capitolo Successivo]()
+[Indice](0-index.md) | [Capitolo Precedente](5-design.md)

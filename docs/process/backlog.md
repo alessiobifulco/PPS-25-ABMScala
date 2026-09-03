@@ -7,7 +7,7 @@ has_children: true
 # Processo di Sviluppo
 
 Questo progetto è stato sviluppato seguendo una metodologia Agile SCRUM-inspired,
-organizzato in sprint settimanali che vanno dal 14 luglio al 28 agosto 2026 (con una pausa nella settimana del 15 agosto dovuta alla chiusura del luogo di lavoro, il campus).
+organizzato in sprint di una o due settimane che vanno dal 14 luglio al 28 agosto 2026 (con una pausa nella settimana del 15 agosto dovuta alla chiusura del luogo di lavoro, il campus).
 
 ## Legenda
 

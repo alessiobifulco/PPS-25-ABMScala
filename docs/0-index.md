@@ -8,6 +8,8 @@
 - [Design Architetturale](4-architecture.md)
 - [Design Di Dettaglio](5-design.md)
 - [Implementazione](6-implementation.md)
+- [Testing](7-testing.md)
+- [Retrospettiva](8-retroprospective.md)
 
 ## Process
 - [Backlog](process/backlog.md)
