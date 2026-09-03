@@ -45,10 +45,10 @@ Il trait **`Agent[S]`** rappresenta la singola entità simulata ed è definito c
 * **Responsabilità**:
     * Aggregare le proprietà osservabili di un'entità, senza contenere logica comportamentale
     * Fornire operazioni di aggiornamento non distruttive tramite extension methods (`withMotion`, `withState`, `withMemory`), ciascuna delle quali restituisce una nuova istanza
-    * Esporre in modo sicuro il contenuto della memoria (`remembers`), restituendo una lista vuota quando l'agente non è dotato di memoria
+    * Esporre in modo sicuro il contenuto della memoria (`remembers`), restituendo una lista vuota quando l'agente non è dotato di memoria, una sorta di getter della memoria
 * **Scelte di design**:
-    * L'implementazione `AgentImpl` è una `case class` **privata**, accessibile solo attraverso il companion object: il client dipende dall'astrazione e la rappresentazione interna resta libera di evolvere
-    * L'identificatore è un **opaque type** `AgentId` su `Int`: garantisce type-safety a costo zero a runtime, impedendo di confondere un identificatore con un qualunque intero
+    * L'implementazione `AgentImpl` è una `case class` **privata**, accessibile solo attraverso il companion object: il client dipende dall'astrazione e la rappresentazione interna resta non vincolata
+    * L'identificatore è un **opaque type** `AgentId` su `Int`: garantisce type-safety a costo zero a runtime, impedendo di confondere un identificatore con un qualunque intero e va a contrastare la primitive obsession
     * La memoria è `Option[Memory]` perché è una capacità opzionale: le simulazioni che non ne hanno bisogno non pagano né in spazio né in complessità
 
 ![Agent Diagram](img/01-agent.png)
@@ -60,7 +60,7 @@ La `case class` **`AgentContext[S]`** è la fotografia locale del mondo su cui u
 * **Responsabilità**:
     * Costituire l'unico canale attraverso cui comportamenti e regole accedono al mondo, garantendo che la decisione sia una funzione della sola informazione locale
     * Offrire interrogazioni derivate tramite extension methods: filtro dei vicini per distanza (`visibleWithin`), raccolta delle credenze udibili dai vicini (`heardBeliefs`), verifica della presenza in un punto di interesse (`isInside`) e della permanenza prolungata al suo interno (`hasSettledIn`)
-* **Scelte di design**: l'alias `type Condition[S] = AgentContext[S] => Boolean` eleva il concetto di condizione a funzione di prima classe, rendendo possibile comporre i predicati del DSL con gli operatori `and` e `or` senza definire una gerarchia di classi dedicata
+* **Scelte di design**: l'alias `type Condition[S] = AgentContext[S] => Boolean` rende il concetto di condizione a funzione di prima classe, rendendo possibile comporre i predicati del DSL con gli operatori `and` e `or` senza definire una gerarchia di classi dedicata, oltre a snellire il codice
 
 ### Ambiente, Confini e Vicinato
 
@@ -117,7 +117,7 @@ La memoria dell'agente è modellata dal trait **`Memory`**, che conserva una lis
     * Applicare un limite di capacità, mantenendo solo le credenze più recenti
     * Esporre interrogazioni di uso comune: l'ultima credenza (`latest`) e le sole osservazioni di punti di interesse (`sightings`)
 * **Tipi di evento**: l'`enum` **`MemoryEvent`** distingue l'osservazione diretta (`Sighting`, che trasporta identificatore e posizione del punto di interesse) dall'incontro con un altro agente (`Encounter`), lasciando la struttura aperta a ulteriori casi
-* **Scelte di design**: la capacità limitata combinata con le condizioni temporali del DSL (`recentlySighted`, `nothingSightedIn`), consente di esprimere fenomeni come la propagazione e il progressivo esaurimento di un allarme
+* **Scelte di design**: la capacità limitata combinata con le condizioni temporali del DSL (`recentlySighted`, `nothingSightedIn`), consente di esprimere fenomeni come la propagazione e il progressivo esaurimento di un allarme oltre a rimuovere possibili problematiche di prestazioni
 
 ![Memory Diagram](img/02-memory.png)
 

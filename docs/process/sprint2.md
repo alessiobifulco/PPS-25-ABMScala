@@ -52,7 +52,7 @@ La scadenza dello sprint è il 01/08/2026.
 |                                     | Istanza di `Renderable` e integrazione nel menu                                                                        | SF         | 1                  | 0                             |
 | **Documentazione del codice**       | ScalaDoc su `InteractionRule`, `SimulationEngine`, `SimulationConfig`                                                  | AB         | 2                  | 0                             |
 |                                     | ScalaDoc su MVU e componenti della view                                                                                | SF         | 1                  | 0                             |
-| **Totale**                          |                                                                                                                        |            | **37.5**           | **0**                         |
+| **Totale**                          |                                                                                                                        |            | **42**             | **0**                         |
 
 ## Divisione del lavoro
 
@@ -100,8 +100,8 @@ linguaggio dichiarativo previsto dai requisiti venga affrontato nello sprint suc
 ## Sprint Retrospective
 
 Lo sprint ha avuto una durata di una settimana. Lo Sprint 1 aveva lasciato 5 ore di debito per
-sottostima del lavoro, con `InteractionRule` priva di assegnatario in fase di planning e
-diversi fix previsti al codice. In questo sprint le stime iniziali sono state rispettate su
+sottostima del lavoro: `InteractionRule`, in carico ad AB, e alcune correzioni al codice
+dell'ambiente, in carico a SF. In questo sprint le stime iniziali sono state rispettate su
 tutti i task assegnati: zero ore rimanenti a fine sprint, nessuna nuova ora di debito
 accumulata. La suddivisione delle responsabilità è rimasta netta: AB sul motore di simulazione
 e sulla logica delle due simulazioni, SF sull'architettura della view e sull'interfaccia

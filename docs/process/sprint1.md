@@ -55,7 +55,7 @@ La scadenza dello sprint è il 25/07/2026.
 |                               | `NeighborStrategy` (BruteForce, Grid) e test suite                            | SF         | 3                  | 1                             |
 | **Documentazione del codice** | ScalaDoc su `Agent`, `AgentId`, `Memory`, `Action`, `ActionGraph`, `Behavior` | AB         | 2                  | 0                             |
 |                               | ScalaDoc su `Space`, `Environment`, `BoundaryPolicy`, `NeighborStrategy`      | SF         | 1                  | 0                             |
-| **Totale**                    |                                                                               |            | **42**             | **5**                         |
+| **Totale**                    |                                                                               |            | **42.5**           | **5**                         |
 
 ## Divisione del lavoro
 
@@ -111,12 +111,10 @@ simulazione, sulle politiche di confine e sulle strategie di calcolo dei vicini.
 
 ### Cosa può essere migliorato
 
-- Il carico di lavoro si è rivelato eccessivo rispetto alla capacità del team: 5 ore su 42 non
-  sono state completate entro la deadline
+- Il carico di lavoro si è rivelato eccessivo rispetto alla capacità del team: 5 ore su 42.5
+  non sono state completate entro la deadline
 - Alcune astrazioni sono state implementate prima di avere un caso d'uso concreto, con il
   rischio di sottrarre tempo a quelle effettivamente necessarie
-- In fase di planning un Product Backlog Item è rimasto privo di assegnatario, e questo è stato
-  rilevato solo a fine sprint
 
 ### Action items per il prossimo sprint
 
@@ -124,6 +122,5 @@ simulazione, sulle politiche di confine e sulle strategie di calcolo dei vicini.
   sprint
 - Completare `InteractionRule` e le correzioni all'`Environment` come primi task dello sprint
   successivo, essendo prerequisito per il motore di simulazione
-- Verificare in chiusura del planning che ogni Sprint Task abbia un assegnatario
 - Introdurre nuove astrazioni solo a fronte di un utilizzatore concreto, per evitare di non
   riuscire a completare gli aspetti concreti necessari

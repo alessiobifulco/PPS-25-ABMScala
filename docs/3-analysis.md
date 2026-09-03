@@ -9,8 +9,12 @@ parent: Report
 L'analisi del problema svolta nella prima fase del progetto ha permesso di
 evidenziare i requisiti elencati di seguito. Poiché il prodotto realizzato non è
 un'applicazione finale a sé ma ideato come pseudo framework, l'utente a cui i requisiti fanno
-riferimento è il **simulation developer**, ovvero chi utilizza le
-astrazioni offerte per modellare un fenomeno.
+riferimento è il **simulation developer** facente parte di un team di sociologi, ovvero chi utilizza le
+astrazioni offerte per modellare un fenomeno. Lo scenario d'uso che abbiamo assunto è
+quello di uno sviluppatore inserito in un gruppo di lavoro composto anche da esperti del
+dominio, che del modello conoscono il fenomeno ma non il linguaggio: da qui l'attenzione
+posta sulla leggibilità della definizione di una simulazione e sulla possibilità di
+osservarne l'andamento senza leggere il codice.
 
 ## Requisiti di business
 
@@ -25,14 +29,25 @@ astrazioni offerte per modellare un fenomeno.
   simulazione viene eseguita. Lo stesso vale per l'**environment**: la forma dello
   spazio, il comportamento al confine, la composizione della popolazione iniziale e
   i **point of interest** devono essere dichiarati come caratteristiche del modello,
-  non costruiti passo per passo dall'utente. Questo requisito motiva la scelta di un
-  Domain Specific Language interno come interfaccia principale del framework.
+  non costruiti passo per passo dall'utente.
 - **Utilizzo di Scala 3 e del paradigma funzionale**: il progetto deve essere
   sviluppato applicando costrutti funzionali di alto livello, come richiesto
   dagli obiettivi del corso.
 - **Dimostrare la flessibilità con simulazioni di esempio**: la genericità del
   framework deve essere sostanziata da simulazioni appartenenti a domini
   differenti, non da una sola estesa a più casi.
+- **Rispetto della scadenza**: il progetto deve essere consegnato entro il termine
+  concordato, pianificando gli sprint in modo da completare per prime le
+  funzionalità essenziali e collocare nelle iterazioni finali quelle opzionali,
+  così che una scadenza anticipata non comprometta la consegna di un prodotto
+  funzionante.
+
+**Criteri di successo del progetto.** Il progetto è considerato riuscito se, alla consegna,
+sono verificate tutte le condizioni seguenti: esistono almeno quattro simulazioni eseguibili
+appartenenti a domini distinti; ciascuna è definita interamente attraverso il DSL e nessuna
+costruisce a mano la popolazione o istanzia direttamente comportamenti e regole; l'**engine**
+non contiene alcun riferimento a un dominio specifico; tutti i requisiti funzionali elencati
+di seguito sono soddisfatti e verificati come descritto nel capitolo dedicato al testing.
 
 ## Modello di dominio
 
@@ -96,16 +111,18 @@ Spazio condiviso in cui gli **agent** vivono:
 
 - definisce la regione di piano in cui gli **agent** possono trovarsi, in forma
   rettangolare o circolare;
-- stabilisce come si comporta un **agent** che ne raggiunge il confine;
+- stabilisce come si comporta un **agent** che ne raggiunge il confine, scegliendo
+  fra il rimbalzo, l'arresto sul bordo e la ricomparsa dal lato opposto;
 - contiene la popolazione corrente di **agent**;
 - fornisce, dato un **agent**, l'insieme dei suoi **neighbor** entro il raggio di
   **perception**;
 - può contenere **point of interest**, regioni circolari dotate di significato
-  per il modello. Un **point of interest** ha una posizione, un raggio e un nome;
-  gli **agent** percepiscono di trovarsi al suo interno e può richiedere, secondo una soglia configurabile dall'utente,
-  una permanenza minima prima di produrre effetto, così da distinguere
-  l'attraversamento occasionale dalla sosta. Non ha **behavior** proprio:
-  costituisce una condizione utilizzabile dalle **interaction rule**, non un **agent**.
+  per il modello. Un **point of interest** ha un nome, una posizione, un raggio e una
+  soglia di permanenza; gli **agent** percepiscono di trovarsi al suo interno e la
+  soglia, se maggiore di zero, stabilisce per quanti tick un **agent** deve restarvi
+  prima che la permanenza produca effetto, così da distinguere l'attraversamento
+  occasionale dalla sosta. Non ha **behavior** proprio: costituisce una condizione
+  utilizzabile dalle **interaction rule**, non un **agent**.
 
 ### La simulazione come composizione
 
@@ -136,14 +153,27 @@ Dal punto di vista di chi utilizza il framework, il sistema deve consentire:
     - comporre più **action** elementari in un **behavior** unico;
     - esprimere movimento casuale, diretto verso un punto o in allontanamento da
       esso, e movimento coordinato rispetto ai **neighbor**;
+    - esprimere la comunicazione di un **memory record** ai **neighbor** e la
+      lettura dei **memory record** che essi già possiedono;
+    - esprimere la generazione di un nuovo **agent** e la rimozione dell'**agent**
+      dalla simulazione.
 - **La definizione delle interaction rule**:
     - dichiarare una transizione fra due **state** e la condizione che la abilita;
     - esprimere condizioni sui **neighbor** e sui **point of interest**;
     - definire **interaction rule** su **state** a valore continuo, non enumerabili, così come su **state** discreti, enumerabili.
+- **La definizione della rappresentazione grafica**:
+    - associare a ciascuno **state** il colore con cui gli **agent** che lo assumono
+      sono disegnati, così che l'andamento della simulazione sia leggibile anche da
+      chi non ha scritto il modello;
+    - ottenere questa associazione senza modificare il tipo di **state**, che resta
+      una scelta dell'utente.
 - **L'esecuzione e l'osservazione**:
-    - scegliere quale simulazione avviare;
+    - scegliere quale simulazione avviare e tornare alla scelta al termine;
     - osservare l'evoluzione della popolazione, con gli **agent** distinguibili
       graficamente in base al proprio **state**;
+    - sospendere e riprendere l'esecuzione della simulazione;
+    - riavviare la simulazione dalla configurazione iniziale senza uscire dalla
+      finestra di esecuzione;
     - seguire l'andamento quantitativo della simulazione mentre questa procede,
       disponendo statistiche in tempo reale;
     - sospendere e riprendere la raccolta delle statistiche indipendentemente
@@ -164,8 +194,7 @@ Il sistema dovrà occuparsi di:
       **perception**;
     - costruire il contesto locale su cui **behavior** e **interaction rule** operano.
 - **Ciclo di simulazione**:
-    - far avanzare la simulazione di un tick alla volta, in modo deterministico
-      rispetto alla configurazione e alle sole sorgenti di casualità dichiarate;
+    - far avanzare la simulazione di un tick alla volta;
     - selezionare, per ogni **agent**, il **behavior** applicabile al suo **state**;
     - selezionare la **interaction rule** applicabile e, se esiste, aggiornare
       lo **state** dell'**agent**;
@@ -175,7 +204,8 @@ Il sistema dovrà occuparsi di:
 - **Applicazione delle action**:
     - comporre in un unico spostamento le richieste di movimento di un **agent** e
       applicarvi la politica di confine;
-    - registrare i **memory record** acquisiti e recapitare quelli comunicati fra **agent**;
+    - registrare i **memory record** acquisiti e recapitare quelli comunicati fra **agent**,
+      indipendentemente dall'ordine in cui gli **agent** vengono elaborati;
     - inserire nella popolazione gli **agent** generati e rimuovere quelli
       eliminati.
 - **Gestione della memory**:
@@ -196,15 +226,33 @@ Il sistema dovrà occuparsi di:
     - determinare la distribuzione spaziale degli **agent**;
     - mantenere il costo di questi calcoli compatibile con l'aggiornamento a ogni tick.
 
+### Requisiti opzionali
+
+Le funzionalità elencate di seguito erano state individuate in analisi come
+desiderabili ma non essenziali, e pianificate di conseguenza nelle iterazioni
+finali. Sono state tutte realizzate, e i requisiti funzionali che le riguardano
+compaiono quindi insieme agli altri:
+
+- la **memory** degli **agent**, con capacità limitata e datazione dei **memory record**,
+  insieme alla possibilità di comunicarne il contenuto ad altri **agent**;
+- i **point of interest**, con la soglia di permanenza e le condizioni che vi si
+  appoggiano;
+- le **statistiche** in tempo reale sulla composizione della popolazione, sulla
+  presenza nei **point of interest** e sulla distribuzione spaziale.
+
 ## Requisiti non funzionali
 
 ### Requisiti esterni
 
 - **Prestazioni**:
     - sostenere una popolazione dell'ordine delle centinaia di **agent**
-      mantenendo un'animazione fluida;
-    - contenere il costo della ricerca dei **neighbor**, che rappresenta l'operazione
-      dominante del ciclo di simulazione.
+      mantenendo un'animazione fluida, ovvero completando l'aggiornamento di un tick
+      e il conseguente ridisegno entro l'intervallo di aggiornamento
+      dell'interfaccia, senza accumulare ritardo al crescere della durata
+      dell'esecuzione;
+    - rendere disponibile una strategia di ricerca dei **neighbor** il cui costo non
+      cresca quadraticamente con la numerosità della popolazione, dato che tale
+      ricerca è l'operazione dominante del ciclo di simulazione.
 - **Affidabilità**:
     - una configurazione incompleta o incoerente deve essere segnalata alla
       costruzione della simulazione, non manifestarsi durante l'esecuzione;
@@ -212,9 +260,11 @@ Il sistema dovrà occuparsi di:
       interrompersi.
 - **Usabilità**:
     - la definizione di una simulazione deve risultare leggibile anche a chi
-      non conosce l'implementazione del framework;
-    - il vocabolario del DSL deve essere uniforme: costrutti analoghi devono
-      esprimersi in forma analoga.
+      non conosce l'implementazione del framework: ogni dichiarazione deve
+      costituire una singola espressione e non deve richiedere all'utente di
+      nominare le strutture interne che la raccolgono;
+    - il vocabolario del DSL deve essere uniforme: costrutti che esprimono concetti
+      analoghi devono avere la stessa forma sintattica.
 
 ### Requisiti interni
 
@@ -225,15 +275,21 @@ Il sistema dovrà occuparsi di:
 - **Estensibilità**:
     - aggiungere un nuovo **behavior** o una nuova condizione deve richiedere
       la sola definizione della funzione corrispondente;
-    - ogni costrutto esposto dal DSL deve essere esercitato da almeno una
-      simulazione, così che l'estensibilità offerta sia dimostrata e non
-      soltanto dichiarata.
+    - ciascuna famiglia di costrutti offerta dal DSL deve comparire in almeno una
+      simulazione di esempio, così che l'estensibilità offerta sia dimostrata e non
+      soltanto dichiarata. Non è invece richiesto che ogni singolo costrutto sia
+      esercitato: quando più costrutti condividono la stessa forma d'uso, e si
+      distinguono solo per la direzione o per il criterio applicato, esercitarne uno
+      dimostra anche gli altri.
 - **Manutenibilità**:
-    - separazione netta fra la definizione del modello, la sua esecuzione e la
-      sua rappresentazione grafica;
-    - utilizzo di strutture dati immutabili per eliminare gli effetti
-      collaterali;
-    - codice documentato tramite ScalaDoc sulle astrazioni pubbliche.
+    - il modulo che definisce il dominio non deve avere dipendenze verso il DSL,
+      l'**engine** o l'interfaccia grafica, così che il modello resti utilizzabile e
+      verificabile indipendentemente da come viene dichiarato, eseguito e mostrato;
+    - le strutture dati del dominio devono essere immutabili; lo stato mutabile
+      deve restare confinato alla costruzione della configurazione e ai componenti
+      dell'interfaccia grafica, dove l'interazione con una libreria imperativa lo
+      rende necessario;
+    - le astrazioni pubbliche devono essere documentate tramite ScalaDoc.
 - **Testabilità**:
     - comportamenti e regole di interazione devono poter essere verificati costruendo
       direttamente un contesto di prova, senza eseguire una simulazione completa;
@@ -245,14 +301,26 @@ Il sistema dovrà occuparsi di:
     - le parti non deterministiche devono essere circoscritte, in modo che il resto
       del comportamento resti verificabile in modo ripetibile.
 
+## Validazione dei requisiti
+
+I requisiti di utente sono verificati eseguendo le simulazioni di esempio, che nel loro
+insieme esercitano ogni famiglia di costrutti offerta dal DSL secondo il criterio fissato
+dal requisito di estensibilità. I requisiti di sistema e i requisiti non funzionali interni
+sono verificati dalla suite di test automatici, la cui organizzazione e copertura sono
+descritte nel capitolo dedicato al testing. I requisiti di prestazione sono verificati per
+osservazione diretta sulle simulazioni di esempio al crescere della numerosità della
+popolazione.
+
 ## Requisiti di implementazione
 
-- **Metodologia di sviluppo**: Agile SCRUM-inspired
-- **Linguaggio**: Scala 3, con paradigma prevalentemente funzionale
-- **Interfaccia**: DSL interno per la definizione delle simulazioni, interfaccia
-  grafica per la loro osservazione
-- **Build tool**: SBT
-- **Testing**: ScalaTest, Mockito
-- **Versioning e collaborazione**: Git, GitHub, GitHub Actions per la CI
+- **Metodologia di sviluppo**: Agile SCRUM-inspired, con sprint settimanali, backlog di
+  prodotto e di sprint, e una relazione breve al termine di ogni sprint mantenuta sotto
+  controllo di versione.
+- **Linguaggio**: Scala 3, con paradigma prevalentemente funzionale.
+- **Build tool**: SBT.
+- **Testing**: ScalaTest, con Mockito per la sostituzione delle dipendenze richiesta dai
+  requisiti di testabilità.
+- **Versioning e collaborazione**: Git e GitHub, con GitHub Actions per l'esecuzione
+  automatica della suite di test a ogni integrazione.
 
 [Indice](0-index.md) | [Capitolo Precedente](2-process.md) | [Capitolo Successivo](4-architecture.md)

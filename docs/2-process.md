@@ -15,10 +15,10 @@ entrambi i membri che contribuiscono attivamente allo sviluppo.
 
 ### Ruoli
 
-- **Product Owner / Esperto di dominio** — Samuele Ferri: responsabile della
+- **Product Owner / Esperto di dominio** Samuele Ferri: responsabile della
   visione del prodotto, della qualità del risultato finale e della coerenza
   con i requisiti definiti.
-- **Scrum Master / Sviluppatore** — Alessio Bifulco: responsabile del
+- **Scrum Master / Sviluppatore** Alessio Bifulco: responsabile del
   coordinamento del processo di sviluppo, della gestione del backlog e della
   cadenza degli sprint.
 
