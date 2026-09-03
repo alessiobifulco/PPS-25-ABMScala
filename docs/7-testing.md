@@ -155,4 +155,4 @@ L'esecuzione regolare della suite in CI durante tutto il ciclo di sviluppo ha ga
 correttezza logica, robustezza rispetto agli input non validi e assenza di regressioni dopo
 ogni refactoring.
 
-[Indice](0-index.md) | [Capitolo Precedente](6-implementation.md) | [Capitolo Successivo](8-retrospective.md)
+[Indice](0-index.md) | [Capitolo Precedente](6-implementation.md) | [Capitolo Successivo](8-retroprospective.md)
