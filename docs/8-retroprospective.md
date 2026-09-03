@@ -15,15 +15,15 @@ per il corso nella sua interezza.
 
 La metodologia SCRUM-inspired ha funzionato bene nonostante la dimensione ridotta del team. La
 suddivisione dei task non ha mai creato problemi di coordinamento: fin dallo Sprint 1 le
-responsabilità sono state separate in modo netto: 
-* AB sulle entità del dominio, sulle astrazioni comportamentali e di interazione, sul motore e sul DSL; 
+responsabilità sono state separate in modo netto:
+* AB sulle entità del dominio, sulle astrazioni comportamentali e di interazione, sul motore e sul DSL;
 * SF sullo spazio di simulazione, sull'ambiente di simulazione e i suoi componenti, sulle strategie di calcolo dei vicini, sull'architettura della view e sull'interfaccia grafica.
 
 La definizione anticipata dei trait ha permesso di lavorare in parallelo senza conflitti di merge
 e senza attese reciproche.
 
 Una sola deadline non è stata rispettata, quella dello Sprint 1: delle 42 ore pianificate ne
-sono rimaste 5 non completate, con `InteractionRule` non implementato e alcuni errori presenti nella parte di 
+sono rimaste 5 non completate, con `InteractionRule` non implementato e alcuni errori presenti nella parte di
 Environment.
 Il debito è stato interamente recuperato come primo task dello Sprint 2, che ha chiuso a zero
 ore residue, così come i due sprint successivi. Il meccanismo delle Sprint Retrospective si è
@@ -35,10 +35,8 @@ taratura dei parametri delle simulazioni è stata sottostimata sia nello Sprint 
 Sprint 4, perché ottenere un fenomeno emergente leggibile a schermo richiede iterazioni che non
 sono scrittura di codice e che in pianificazione tendono a non essere contate. La seconda
 riguarda la **validazione**: in più occasioni difetti puramente comportamentali sono arrivati
-fino all'esecuzione ed è stata l'osservazione a schermo, non la test suite, a rivelarli. Il
-caso più significativo è stato un blocco di configurazione del DSL che scriveva su un builder
-diverso da quello poi usato per costruire, e che produceva una finestra vuota senza alcun
-errore. La pratica di riservare un margine in fase di planning si è invece rivelata la scelta
+fino all'esecuzione ed è stata l'osservazione a schermo, non la test suite, a rivelarli. 
+La pratica di riservare un margine in fase di planning si è invece rivelata la scelta
 più utile del processo: ha assorbito per intero il refactoring del dominio dello Sprint 3, non
 previsto a specifica.
 
@@ -63,34 +61,23 @@ stato dell'agente senza vincoli di ereditarietà. Queste possibilità non erano 
 e averle comprese in corso d'opera ha portato a deviare dal design iniziale più di quanto
 sarebbe accaduto partendo con la stessa consapevolezza.
 
-Per **SF**, la difficoltà principale è stata collegare un modello immutabile a una libreria grafica imperativa come Swing. 
-Il pattern MVU ha risolto il problema concettualmente, ma applicarlo in modo funzionale ha richiesto di introdurre la `State` 
-monad per esprimere le trasformazioni del modello come computazioni componibili anziché come modifiche dirette.
-Comprendere a fondo il meccanismo della `State` monad e delle type class di Scala 3 ha richiesto tempo, ma ha 
-permesso di mantenere la logica di aggiornamento completamente separata dai componenti grafici e verificabile in isolamento.
+Per **SF**, la difficoltà principale è stata collegare un modello immutabile a una libreria grafica imperativa come Swing.
+Il pattern MVU ha fornito una struttura per separare modello, aggiornamento e visualizzazione, ma la sua applicazione ha
+richiesto di gestire con attenzione il confine tra lo stato immutabile della simulazione e lo stato locale necessario ai
+componenti grafici. L’introduzione della `State` monad ha permesso di rappresentare le trasformazioni del modello come
+computazioni componibili, mantenendo la logica di aggiornamento separata dalla gestione della finestra e dei pannelli.
 
-Anche la curva di apprendimento su Scala 3 è stata rilevante. Le context function hanno permesso di costruire 
-il blocco `environment` del DSL senza che l'utente nomini mai il builder, i `given` e le type class hanno reso `Renderable`
-e `NeighborStrategy` configurabili senza vincoli di ereditarietà, e gli opaque type hanno fornito type-safety per gli 
-identificatori senza introdurre wrapper aggiuntivi a runtime. Queste possibilità non erano familiari all'inizio del progetto e 
-comprenderle ha portato a rivedere alcune scelte iniziali, ma ha anche reso il codice finale più coerente con i 
-principi del linguaggio.
+Una seconda difficoltà ha riguardato la progettazione delle astrazioni spaziali e della ricerca dei vicini. Il sistema
+doveva supportare geometrie diverse, politiche di confine differenti e algoritmi alternativi per il calcolo dei vicini
+senza vincolare l’Engine a una particolare implementazione. È stato quindi necessario coordinare `Space`, `BoundaryPolicy`,
+`Toroidal`, `Environment` e `NeighborStrategy`, mantenendo separate la geometria dell’ambiente, la gestione del movimento e
+la ricerca degli agenti vicini.
 
-Una seconda difficoltà ha riguardato la visualizzazione delle statistiche nelle simulazioni con stato continuo. 
-Usare direttamente il valore numerico come etichetta produceva una voce distinta per ogni agente, rendendo il grafico illeggibile.
-La soluzione è stata utilizzare `labelOf` di `Renderable`, separando il colore dall'etichetta e permettendo a ciascuna
-simulazione di dichiarare come raggruppare i propri stati senza modificare né il framework né il pannello statistico.
-
-L'integrazione dei `Point of Interest` ha richiesto di coordinare le modifiche con AB: 
-la scelta di modellare i POI come parte dell'`Environment` è emersa durante lo sviluppo ed è stata 
-la decisione più rilevante dell'area, perché ha reso i POI disponibili alla GUI attraverso l'ambiente contenuto 
-nello stato della simulazione, senza introdurre parametri aggiuntivi.
-
-Il criterio adottato per uscire dai dubbi di design è stato quello formalizzato nella
-Definition of Done dello Sprint 4: **ogni costrutto esposto dal DSL deve essere esercitato da
-almeno una simulazione**. Si è rivelato una regola di decisione efficace, che ha risolto
-rapidamente questioni altrimenti destinate a restare aperte e ha motivato la rimozione delle
-astrazioni mai usate.
+Infine, l’integrazione dei `Point of Interest` ha richiesto di coordinare il modello di dominio, l’Engine, il DSL e la GUI.
+I POI dovevano rimanere elementi passivi dell’ambiente, ma al tempo stesso essere utilizzabili dalle condizioni del DSL,
+tenere conto della permanenza degli agenti e risultare visibili nell’interfaccia grafica. La definizione di `POI` e `Residency`
+ha permesso di separare la regione spaziale dai contatori di permanenza associati agli agenti, rendendo possibile distinguere il
+semplice attraversamento dalla permanenza prolungata.
 
 ## Stato attuale
 
@@ -116,10 +103,7 @@ stretto, si è passati per una fase intermedia in cui i test venivano scritti in
 all'implementazione, e si è tornati al TDD nella fase finale. La fase intermedia è quella che
 ha prodotto i risultati peggiori, ed è la stessa in cui i difetti del DSL sono arrivati fino
 all'esecuzione: quando il test segue il codice invece di precederlo, tende a legarsi ai
-dettagli implementativi e a non coprire i casi che il codice non aveva già previsto. Il ritorno
-al TDD nello Sprint 4 ha reso il refactoring del dominio condotto nell'ultimo sprint e quindi
-il più rischioso dell'intero progetto verificabile passo per passo, consentendo di
-confermare che le simulazioni esistenti mantenessero lo stesso comportamento osservabile.
+dettagli implementativi e a non coprire i casi che il codice non aveva già previsto..
 
 Mockito è stato usato per sostituire le dipendenze e verificare in isolamento le unità di base,
 mentre `scoverage`, configurato fin dallo Sprint 1, è servito come strumento diagnostico per
@@ -135,7 +119,7 @@ la sola definizione dei costrutti corrispondenti, senza modifiche all'engine:
   statistiche per tick già presente;
 - **Astrazione di Path/WayPoint** per instradare gli agenti lungo percorsi dichiarati, ultima
   funzionalità opzionale rimasta;
-- **City Simulation**: un'ultima simulazione dimostrativa che con l'aggiunta dei path avrebbe 
+- **City Simulation**: un'ultima simulazione dimostrativa che con l'aggiunta dei path avrebbe
   permesso di simulare il traffico cittadino;
 
 La direzione di sviluppo più interessante, e quella che il progetto aveva come orizzonte fin
@@ -158,17 +142,15 @@ girino sullo stesso motore.
 L'adozione di Scala 3 e del paradigma funzionale ha inciso profondamente sul design. Le
 strutture immutabili hanno eliminato per costruzione un'intera classe di difetti e hanno reso
 ogni componente verificabile in isolamento, mentre le context function e le type class hanno
-permesso di ottenere un DSL leggibile senza rinunciare alla genericità. Il prezzo pagato è
-stato la curva di apprendimento del linguaggio, che ha reso alcune scelte iniziali più incerte
-di quanto sarebbero state con maggiore familiarità.
+permesso di ottenere un DSL leggibile senza rinunciare alla genericità.
 
 Il bilancio complessivo è positivo. Il framework consegnato copre tutti i requisiti principali
 e buona parte di quelli opzionali, e il dominio è più coerente alla fine del progetto di quanto
 lo fosse a metà, grazie al refactoring condotto nell'ultimo sprint. Resta la consapevolezza di
 aver impiegato più tempo del necessario in alcune fasi: la ricerca del design iniziale, le
 riscritture della sintassi del DSL e la taratura dei parametri hanno assorbito ore che una
-pianificazione più consapevole avrebbe potuto contenere. È però anche il tipo di costo che
-difficilmente si evita quando si progetta un'astrazione nuova, e l'esperienza acquisita nel
-riconoscerlo è essa stessa un risultato del progetto.
+pianificazione più consapevole avrebbe potuto contenere. Ciò è principalmente dovuto al fatto che 
+il sistema fosse un astrazione partendo da zero senza una possiible base da seguire, e l'esperienza 
+acquisita da tale sfida è essa stessa un risultato del progetto.
 
 [Indice](0-index.md) | [Capitolo Precedente](7-testing.md)

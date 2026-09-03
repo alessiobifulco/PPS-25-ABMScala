@@ -31,56 +31,54 @@ Il mio contributo al progetto si è focalizzato sulle seguenti aree:
 1. **Progettare il modello senza una specifica di riferimento**
 
    In un progetto che riproduce qualcosa di già esistente il comportamento atteso è noto in partenza, e il lavoro
-   consiste nel replicarlo. Qui non c'era un riferimento a cui confrontarsi: quali astrazioni introdurre, dove
-   fermare i loro confini e con quale vocabolario esporle sono state tutte decisioni nostre. La difficoltà non è
-   stata scrivere il codice di una singola astrazione, ma capire *quali* astrazioni servivano. Il metodo che abbiamo
-   seguito è stato incrementale: ogni volta che una nuova simulazione di esempio risultava scomoda da scrivere,
-   abbiamo trattato la scomodità come un difetto del modello e non come un limite da aggirare nel codice della
-   simulazione.
+   consiste nel replicarlo. Qui non c'era un riferimento a cui confrontarmi: quali astrazioni introdurre, dove
+   fermare i loro confini e con quale vocabolario esporle sono state tutte decisioni mie. La difficoltà non è stata
+   scrivere il codice di una singola astrazione, ma capire *quali* astrazioni servivano. Ho quindi proceduto in modo
+   incrementale: ogni volta che una nuova simulazione di esempio risultava scomoda da scrivere, ho trattato la
+   scomodità come un difetto del modello e non come un limite da aggirare nel codice della simulazione.
 
 2. **Riusabilità ed estendibilità come vincolo di progetto**
 
    Il prodotto non è un'applicazione ma una libreria, e serve a poco se descrive bene un dominio solo. Questo ha
    significato rendere generico tutto ciò che cambia da un dominio all'altro e impedire che il framework acquisisse
    conoscenza di un dominio particolare: il motore non sa cosa sia un contagio o un'opinione, sa solo che esiste un
-   tipo di stato `S` deciso da chi usa la libreria. Il criterio concreto che ci siamo dati, e che è verificabile
+   tipo di stato `S` deciso da chi usa la libreria. Il criterio concreto che mi sono dato, e che è verificabile
    guardando il codice, è che aggiungere un comportamento, una condizione o un tipo di stato non debba comportare
    modifiche al motore.
 
 3. **Un DSL che si legga come un enunciato del modello**
 
-   Volevamo che una simulazione si leggesse come la descrizione del fenomeno, non come una sequenza di chiamate a
+   Volevo che una simulazione si leggesse come la descrizione del fenomeno, non come una sequenza di chiamate a
    metodi. Scrivere `Infected whenAgentIs Healthy iff atLeastNear(1, Infected)` come istruzione a sé, senza nominare
    builder né variabili di appoggio, ha richiesto di mettere insieme più meccanismi del linguaggio, e soprattutto di
    farlo senza rinunciare ai controlli del compilatore: la riga si legge come una frase, ma una composizione
    malformata resta un errore di compilazione e non un problema che emerge a esecuzione.
 
-4. **Separazione fra intenzione, cambio di stato ed effetto**
+4. **Separazione fra intenzione, azione e cambio di stato**
 
-   Un agente deve poter agire, cambiare stato e produrre effetti su altri agenti. Concentrare le tre cose in un
-   unico costrutto le avrebbe legate fra loro: il comportamento avrebbe avuto bisogno dell'intera simulazione per
-   funzionare, l'esito sarebbe dipeso dall'ordine di attraversamento della popolazione, e modificare il movimento
-   avrebbe richiesto di toccare anche l'evoluzione dello stato.
+   Un agente deve poter intendere, agire e cambiare stato. Concentrare le tre cose in un unico costrutto le avrebbe
+   legate fra loro: il comportamento avrebbe avuto bisogno dell'intera simulazione per funzionare, l'esito sarebbe
+   dipeso dall'ordine di attraversamento della popolazione, e modificare il movimento avrebbe richiesto di toccare
+   anche l'evoluzione dello stato.
 
    Ho quindi assegnato i tre compiti a punti distinti. Il `Behavior` dichiara l'**intenzione** producendo valori di
-   tipo `Action`; l'`InteractionRule` dichiara il **cambio di stato**; il motore è l'unico punto in cui gli uni e
-   l'altro diventano **effetto**, ed è l'unico a conoscere la popolazione intera. Ne segue che la decisione è una
-   funzione pura del solo contesto locale, che le intenzioni possono essere ispezionate prima di essere applicate, e
-   che gli effetti su più agenti vengono raccolti durante la decisione e applicati in una fase separata, così da non
-   dipendere dall'ordine di elaborazione. Il prezzo è che il motore deve interpretare l'intero vocabolario delle
-   azioni, comprese quelle che ricadono su agenti diversi da chi le ha dichiarate.
+   tipo `Action`; l'`InteractionRule` dichiara il **cambio di stato**; il motore è l'unico punto in cui essi vengono
+   **interpretati**, ed è l'unico a conoscere la popolazione intera. Ne segue che la decisione è una funzione pura
+   del solo contesto locale, che le intenzioni possono essere ispezionate prima di essere applicate, e che gli
+   effetti su più agenti vengono raccolti durante la decisione e applicati in una fase separata, così da non
+   dipendere dall'ordine di elaborazione. Il prezzo è che il motore deve interpretare l'intero insieme delle azioni,
+   comprese quelle che ricadono su agenti diversi da chi le ha dichiarate.
 
 ## Modello dell'agente
 
 ### Agent e AgentId
 
 **Problema:** l'agente è la struttura dati centrale del sistema, viene ricreata a ogni tick per ogni entità della
-popolazione e deve essere immutabile, aggiornabile in modo conciso e indipendente dal dominio applicativo. Esporne la
-rappresentazione avrebbe legato il codice cliente a una scelta implementativa.
+popolazione e deve essere immutabile, aggiornabile e indipendente dal dominio applicativo.
 
 **Soluzione:** `Agent[S]` è un `trait` parametrico sullo stato di dominio, la cui unica implementazione è una
 `case class` **privata**, raggiungibile solo attraverso il companion object. Chi usa la libreria vede quindi un nome,
-un costruttore e delle operazioni, ma non la struttura concreta: se domani cambiassimo il modo in cui un agente è
+un costruttore e delle operazioni, ma non la struttura concreta: se domani cambiassi il modo in cui un agente è
 rappresentato, il codice delle simulazioni non ne risentirebbe.
 
 Gli aggiornamenti sono forniti come **extension methods** che restituiscono sempre una nuova istanza. Li ho tenuti
@@ -112,9 +110,9 @@ object AgentId:
 ```
 
 Un identificatore è concettualmente diverso da un numero: sommare due identificatori o usare un contatore come
-destinatario di un messaggio sono operazioni prive di senso, ma se il tipo fosse `Int` il compilatore le
-accetterebbe. Il tipo opaco li rende due tipi distinti in compilazione mantenendo un intero a runtime, quindi il
-controllo non costa nulla in esecuzione.
+destinatario di un messaggio sono operazioni che non si dovrebbero poter fare, ma se il tipo fosse `Int` il
+compilatore le accetterebbe. Il tipo opaco li rende due tipi distinti in compilazione mantenendo un intero a
+runtime, quindi il controllo non costa nulla in esecuzione.
 
 La memoria è dichiarata `Option[Memory]` perché è una capacità opzionale: le simulazioni che non la usano non pagano
 né in occupazione né in complessità. Per non trascinare quell'`Option` in ogni punto in cui la memoria viene letta,
@@ -126,14 +124,14 @@ def remembers: List[Belief] = agent.memory match
   case _       => List.empty
 ```
 
-Così un comportamento che consulta i ricordi funziona anche su agenti senza memoria, restituendo semplicemente
-nessun ricordo, invece di dover distinguere i due casi ogni volta.
+Così un comportamento che consulta i ricordi funziona anche su agenti senza memoria, restituendo una lista vuota,
+invece di dover distinguere i due casi ogni volta.
 
 ### P2d e V2d
 
 **Problema:** il codice del dominio è pieno di operazioni geometriche: somme di vettori, differenze di posizioni,
 normalizzazioni. Scritte come chiamate a funzioni con nome, allontanano il testo del programma dalla formula che
-rappresenta, proprio nel punto in cui la direzione di movimento nasce dalla combinazione di più contributi.
+rappresenta, e la direzione di movimento nasce proprio dalla combinazione di più contributi.
 
 **Soluzione:** posizione e spostamento sono due `case class` distinte, a cui gli operatori algebrici sono aggiunti
 dall'esterno con gli extension methods.
@@ -145,11 +143,6 @@ extension (p: P2d)
 
   def -(other: P2d): V2d = V2d(p.x - other.x, p.y - other.y)
 ```
-
-Tenere due tipi separati invece di uno solo con due nomi non è una duplicazione: le firme qui sopra dicono che una
-posizione più un vettore dà una posizione, che la differenza fra due posizioni è un vettore, e non prevedono affatto
-la somma di due posizioni, che nel modello non significa nulla. È lo stesso ragionamento fatto per `AgentId`,
-applicato però alle operazioni ammesse invece che al tipo.
 
 La normalizzazione è scritta per casi anziché con un `if`, così che il vettore nullo risulti uno dei casi previsti e
 non un'eccezione da ricordarsi:
@@ -186,12 +179,11 @@ private case class MemoryImpl(beliefs: List[Belief], capacity: Int) extends Memo
 Il limite è imposto dentro `remember` invece che lasciato a chi la usa: in questo modo non esiste alcun percorso che
 produca una memoria oltre capacità, e chi scrive un comportamento non deve ricordarsi di potarla.
 
-Il metodo `sightings` usa `collect` per filtrare e riconoscere il tipo di evento in un solo passaggio. Serve al DSL:
-è grazie a questo metodo che il movimento verso un luogo ricordato può essere scritto senza che il comportamento
-sappia com'è fatta la memoria dentro.
+Il metodo `sightings` usa `collect` per filtrare e riconoscere il tipo di evento in un solo passaggio. Serve al DSL,
+in modo che il movimento verso un luogo ricordato possa essere scritto senza che il comportamento sappia com'è fatta
+la memoria dentro.
 
-Il tipo di evento è un `enum`, cioè un insieme chiuso: un `MemoryEvent` è *o* un'osservazione diretta *o* un
-incontro, e nient'altro.
+Il tipo di evento è un `enum`: un `MemoryEvent` è *o* un'osservazione diretta *o* un incontro.
 
 ```scala
 enum MemoryEvent:
@@ -202,16 +194,17 @@ enum MemoryEvent:
 I due casi rappresentano le due sole vie per cui un'informazione entra nella memoria di un agente. `Sighting` è
 l'osservazione di un punto di interesse, e porta con sé l'identificatore del punto e la sua posizione, cioè quello
 che serve a un comportamento per tornarci. `Encounter` è l'incontro con un altro agente, di cui registra l'identità
-e un booleano sull'esito, che ciascun dominio interpreta come preferisce. Il fatto che i casi siano solo questi
-permette al compilatore di avvisarci se un `match` sugli eventi ne dimentica uno.
+e un booleano sull'esito, che ciascun dominio interpreta come preferisce. Se l'utente volesse aggiungere altre
+casistiche dovrebbe allargare l'`enum`, e il compilatore lo obbligherebbe a dire come l'agente si comporta in quei
+casi.
 
 ## Percezione e decisione
 
 ### AgentContext e Condition
 
 **Problema:** un comportamento deve poter guardare il mondo, ma dargli in mano l'intero stato della simulazione
-avrebbe contraddetto il principio su cui si regge il modello ad agenti, cioè che la decisione dipenda solo da
-informazione **locale**.
+avrebbe contraddetto il principio seguito sugli agenti, cioè che la decisione dipenda solo da informazione
+**locale** e che i pattern collettivi emergano dall'unione delle decisioni dei singoli.
 
 **Soluzione:** `AgentContext` è l'unica finestra sul mondo, e contiene poco per scelta: l'agente in esame, i suoi
 vicini, il tick corrente e la sua permanenza nei punti di interesse. Non contiene un riferimento all'ambiente, così
@@ -229,9 +222,9 @@ extension [S](ctx: AgentContext[S])
   def heardBeliefs: List[Belief] = ctx.neighbors.flatMap(_.remembers)
 ```
 
-`visibleWithin` merita una nota. Il raggio di percezione della simulazione stabilisce quali vicini un agente conosce,
-ma un singolo comportamento può volerne considerare solo una parte, ad esempio percepire da lontano ma farsi
-influenzare solo da vicino. Filtrare il contesto invece di calcolare un secondo vicinato riusa il lavoro già fatto
+Il raggio di percezione della simulazione stabilisce quali vicini un agente conosce, ma un singolo comportamento può
+volerne considerare solo una parte, ad esempio percepire da lontano ma farsi influenzare solo da vicino: per questo
+ho aggiunto `visibleWithin`. Filtrare il contesto invece di calcolare un secondo vicinato riusa il lavoro già fatto
 per il tick.
 
 La condizione è un semplice alias di funzione:
@@ -248,10 +241,10 @@ di predicato.
 
 **Problema:** un comportamento deve poter produrre effetti diversi fra loro: muoversi, ricordare, comunicare,
 generare un nuovo agente, morire. Se li eseguisse direttamente, la sua esecuzione non sarebbe più una funzione del
-solo contesto e non potremmo collaudarla senza far girare una simulazione.
+solo contesto, non potrei collaudarla senza far girare una simulazione, e dipenderebbe dal codice che li applica.
 
-**Soluzione:** ho definito un `enum` che è il **vocabolario delle intenzioni**. Un'azione è un valore: il
-comportamento lo produce, qualcun altro lo esegue.
+**Soluzione:** ho definito un `enum` che è il **vocabolario delle intenzioni**. Un'azione è interpretata su due
+piani: il comportamento la produce, qualcun altro la esegue.
 
 ```scala
 enum Action[+S]:
@@ -265,15 +258,12 @@ enum Action[+S]:
 I cinque casi coprono tutto ciò che un agente può chiedere al mondo. `Move` esprime l'intenzione di spostarsi e porta
 una velocità, non una posizione di arrivo, così che più richieste di movimento nello stesso tick possano essere
 sommate fra loro. `Remember` chiede di scrivere un evento nella propria memoria, `Tell` di scriverlo in quella di un
-destinatario indicato: la stessa informazione può quindi essere osservata o ricevuta, e il comportamento non deve
-distinguere i due casi. `Spawn` chiede l'ingresso di un nuovo agente e ne indica solo lo stato iniziale, perché
+destinatario indicato. `Spawn` chiede l'ingresso di un nuovo agente e ne indica solo lo stato iniziale, perché
 l'identificatore lo assegna il motore, che è l'unico a sapere quali sono già in uso. `Die` chiede l'uscita
 dell'agente e non ha parametri perché non ammette varianti.
 
 Il parametro di tipo è **covariante**. L'unico caso che porta con sé uno stato di dominio è `Spawn`; tutti gli altri
-non dipendono da `S`, e la covarianza permette di usarli qualunque sia lo stato della simulazione. Senza di essa una
-funzione che produce, per esempio, solo `Die()` non sarebbe utilizzabile dove ci si aspetta una lista di
-`Action[S]`, e il DSL avrebbe dovuto chiedere all'utente di annotare il tipo anche dove non serve.
+non dipendono da `S`, e la covarianza permette di usarli qualunque sia lo stato della simulazione.
 
 Essendo l'insieme chiuso, aggiungere un tipo di effetto si riduce a un caso in più da interpretare in un solo punto,
 e il compilatore segnala i `match` rimasti indietro.
@@ -294,9 +284,9 @@ trait Behavior[S]:
   def appliesTo(ctx: AgentContext[S]): Boolean = whenState.forall(_ == ctx.focus.state)
 ```
 
-L'`Option` sullo stato di attivazione è il modo in cui abbiamo codificato il comportamento di default: `forall` su
-`None` è `true`, quindi un comportamento senza stato di attivazione si applica a chiunque. Il vantaggio è che il
-motore non ha bisogno di sapere che esiste la nozione di "default": per lui è un comportamento come gli altri, che
+L'`Option` sullo stato di attivazione è il modo in cui ho codificato il comportamento di default: `forall` su `None`
+è `true`, quindi un comportamento senza stato di attivazione si applica a chiunque. Il vantaggio è che il motore non
+ha bisogno di sapere che esiste la nozione di "default": per lui è un comportamento come gli altri, che
 semplicemente risulta sempre applicabile.
 
 `InteractionRule` associa allo stato di partenza e a una condizione il nuovo stato da assumere, e la sua
@@ -313,9 +303,8 @@ entrambi i costrutti con lo stesso identico meccanismo.
 
 ### Sorgenti di azioni e combinatori
 
-**Problema:** definire un comportamento richiedeva tre passi distinti, cioè implementare un trait, dichiararne lo
-stato di attivazione e registrarlo, per esprimere un'unica idea. Serviva inoltre un modo per **comporre** i comportamenti:
-un agente che si muove *e* comunica, oppure che tenta una cosa *e altrimenti* ne fa un'altra.
+**Problema:** definire un comportamento costava tre passi per esprimere un'unica idea, e comportamenti già scritti
+non si potevano combinare fra loro.
 
 **Soluzione:** ho dato un nome alla funzione che produce azioni e ci ho costruito sopra un insieme di combinatori,
 scritti come extension methods `infix`.
@@ -342,7 +331,7 @@ extension [S](source: ActionSource[S])
 
 Ogni combinatore prende sorgenti e restituisce una sorgente, cioè qualcosa dello stesso tipo di ciò che ha ricevuto.
 È questa proprietà a rendere le composizioni annidabili senza limiti: il risultato di una composizione è un
-argomento valido per la successiva, e non serve prevedere i casi.
+argomento valido per la successiva.
 
 I due combinatori di composizione dicono cose diverse. `to` è **congiunzione**: unisce le azioni di entrambe le
 sorgenti, e serve quando un agente fa più cose nello stesso tick. `orElse` è **alternativa**: usa la seconda
@@ -352,8 +341,7 @@ punta a un obiettivo noto e ripiega su una strategia generica quando quell'obiet
 Aver scelto un alias invece di un trait ha un effetto concreto sull'estendibilità: il tipo delle sorgenti coincide
 con un normale tipo funzione, quindi qualunque funzione con quella firma è già una sorgente, senza dichiarazioni
 aggiuntive. Le sorgenti della libreria sono normali funzioni, e una sorgente scritta da chi usa il framework ottiene
-tutti i combinatori solo per il fatto di avere il tipo giusto. In cambio abbiamo rinunciato a poter vincolare il
-tipo: qualsiasi funzione da contesto a lista di azioni viene accettata, anche se scritta per tutt'altro scopo.
+tutti i combinatori solo per il fatto di avere il tipo giusto. In cambio ho rinunciato a poter vincolare il tipo.
 
 Anche la registrazione presso il builder è un combinatore, ed è ciò che permette a una dichiarazione di essere
 un'espressione completa e autonoma:
@@ -368,10 +356,8 @@ condizione che la subordina e lo stato a cui si applica stanno nella stessa fras
 
 ### Comportamento di stormo
 
-**Problema:** il movimento coordinato non nasce da una regola sola, ma dalla somma di più spinte che si contrastano:
-avvicinarsi al gruppo, allinearsi alla sua direzione, tenere le distanze, conservare la propria inerzia. Se i quattro
-pesi fossero parametri posizionali, il significato di ciascun argomento dipenderebbe dal punto in cui si trova nella
-chiamata; se fossero obbligatori, andrebbero scritti anche quando non si vuole cambiarli.
+**Problema:** il movimento coordinato dipende da più parametri contemporaneamente, che chi scrive una simulazione
+vorrà quasi sempre lasciare al valore predefinito e ogni tanto cambiare uno alla volta.
 
 **Soluzione:** una classe di configurazione i cui parametri si impostano con metodi `infix` incatenabili, ciascuno
 con un valore di partenza, e che **è essa stessa una `ActionSource`**.
@@ -384,10 +370,6 @@ Ogni metodo imposta un parametro e restituisce la configurazione, così le impos
 espressione e quelle non scritte restano al valore iniziale: chi non ha esigenze particolari dichiara solo il
 criterio di appartenenza al gruppo, chi ne ha aggiunge quello che gli serve, e ogni parametro si riconosce dal nome
 del metodo invece che dalla posizione.
-
-Il fatto che la configurazione sia già una sorgente di azioni è il punto che rende lo stormo non un caso speciale:
-si compone con gli stessi operatori delle altre sorgenti e si registra allo stesso modo, quindi il DSL non ha
-bisogno di una sintassi dedicata per il movimento coordinato.
 
 Va detto che questa è l'unica parte del DSL costruita per assegnazioni successive invece che per sole espressioni.
 Lo stato mutabile resta chiuso dentro l'istanza di configurazione e non è visibile da fuori, ma è corretto notare
@@ -403,15 +385,12 @@ La combinazione delle spinte passa da una funzione ausiliaria che gestisce il ca
 private def normalizedOrElse(v: V2d, fallback: => V2d): V2d = if v.length > 0 then v.normalized else fallback
 ```
 
-Il ripiego è dichiarato **by-name**, quindi viene valutato solo se serve davvero. Non è un dettaglio: in alcuni punti
-il ripiego genera una direzione casuale, e valutarlo comunque significherebbe estrarre numeri casuali anche quando
-il risultato viene buttato via.
+Il ripiego è dichiarato **by-name**, quindi viene valutato solo se serve davvero.
 
 ### Regole discrete
 
-**Problema:** quando gli stati sono un insieme enumerabile, una regola di transizione è di fatto una frase: *questo
-stato diventa quello, quando accade questo*. Scritta come costruzione di un oggetto, si allontana dall'enunciato del
-modello, e il confronto fra il codice e il fenomeno descritto diventa meno immediato.
+**Problema:** una regola di transizione è una frase, *questo stato diventa quello quando accade questo*, e scritta
+come costruzione di un oggetto si allontana dal modello che descrive.
 
 **Soluzione:** ho spezzato la frase in due passi, ciascuno realizzato da un extension method. Il primo produce un
 tipo intermedio che rappresenta la sola transizione, il secondo vi applica la condizione e registra la regola presso
@@ -433,9 +412,9 @@ implementazione è privata. Il risultato è una riga che ricalca l'enunciato:
 Infected whenAgentIs Healthy iff atLeastNear(1, Infected)
 ```
 
-Il vocabolario di condizioni l'abbiamo ricavato dalle forme che ricorrono nei modelli ad agenti: conteggio dei vicini
-in un dato stato, probabilità, relazione con i punti di interesse, distanza, condizioni temporali sulla memoria.
-Tutte sono componibili perché condividono lo stesso tipo:
+Il vocabolario di condizioni l'ho ricavato dalle forme che ricorrono nei modelli ad agenti: conteggio dei vicini in
+un dato stato, probabilità, relazione con i punti di interesse, distanza, condizioni temporali sulla memoria. Tutte
+sono componibili perché condividono lo stesso tipo:
 
 ```scala
 extension [S](condition: Condition[S])
@@ -460,15 +439,14 @@ def nothingSightedIn[S](ticks: Int): Condition[S] =
 ```
 
 `exists` e `forall` decidono anche cosa succede sulla memoria vuota: la prima condizione risulta falsa, la seconda
-vera. È il comportamento che ci aspettavamo, perché un agente che non ricorda nulla non ha visto nulla di recente e
-al tempo stesso non ha visto nulla da un pezzo.
+vera. È il comportamento che mi aspettavo, perché un agente che non ricorda nulla non ha visto nulla di recente e al
+tempo stesso non ha visto nulla da un pezzo.
 
 ### Regole continue
 
-**Problema:** non tutti i modelli hanno stati discreti. Quando lo stato è un numero che converge poco alla volta, le
-transizioni per casi non servono, perché i casi non sono elencabili. D'altra parte, chiedere a chi usa la libreria di
-estendere un nostro trait per il proprio tipo di stato significherebbe imporgli un vincolo di ereditarietà, e
-renderebbe impossibile usare un tipo che non può modificare.
+**Problema:** non tutti gli stati sono discreti. Quando lo stato è un numero che converge poco alla volta le
+transizioni per casi non servono, e serviva un modo per trattarlo senza chiedere all'utente di modificare il proprio
+tipo.
 
 **Soluzione:** una **type class** che descrive come leggere un numero da uno stato e come rimettercelo dentro, più
 una regola parametrica che la usa.
@@ -480,8 +458,8 @@ trait Continuous[S]:
 ```
 
 L'adattamento avviene fuori dal tipo dell'utente: lui scrive una given instance, e il compilatore la trova da solo
-nel punto in cui serve. Il suo tipo di stato resta una normale `case class` e non acquisisce nessuna dipendenza verso
-la nostra libreria. Il vincolo non sparisce, si sposta: se l'istanza non c'è, l'errore arriva in compilazione nel
+nel punto in cui serve. Il suo tipo di stato resta una normale `case class` e non acquisisce nessuna dipendenza
+verso la libreria. Il vincolo non sparisce, si sposta: se l'istanza non c'è, l'errore arriva in compilazione nel
 punto in cui si usa la regola continua, non a esecuzione.
 
 La regola di convergenza ha valori di default per il raggio di influenza, il criterio di affinità e il tasso:
@@ -504,8 +482,8 @@ su un insieme vuoto.
 
 ### Builder e facciata
 
-**Problema:** i blocchi del DSL devono raccogliere le dichiarazioni scritte al loro interno, ma se l'utente dovesse
-nominare o passare l'oggetto che le raccoglie perderemmo proprio la forma dichiarativa che volevamo ottenere.
+**Problema:** le dichiarazioni scritte dentro un blocco vanno raccolte da qualche parte, ma l'utente non deve mai
+vedere chi le raccoglie.
 
 **Soluzione:** ogni blocco è una **context function**. Il builder viene creato dal blocco stesso e passato
 implicitamente a tutte le costruzioni che stanno dentro, che possono quindi registrarsi da sole.
@@ -531,7 +509,7 @@ override def build(): SimulationConfig[S] =
   require(environment.nonEmpty, "Cannot build the simulation: environment is missing")
 ```
 
-Per le probabilità ho usato un **opaque type** che si valida da solo alla costruzione:
+Per le probabilità ho usato un **opaque type**:
 
 ```scala
 opaque type Chance = Double
@@ -547,10 +525,10 @@ object Chance:
     def happens: Boolean = math.random() < c
 ```
 
-Siccome il costruttore è l'unico modo di ottenere un `Chance`, un valore di quel tipo è per costruzione una
-probabilità valida, e il controllo sull'intervallo si paga una volta sola invece che a ogni utilizzo. Le condizioni
-probabilistiche del DSL accettano un `Double` per non obbligare l'utente a una conversione esplicita, ma costruiscono
-il `Chance` internamente, quindi il controllo viene fatto comunque.
+Il costruttore è l'unico modo di ottenere un `Chance`, quindi ogni valore di quel tipo è una probabilità valida e la
+verifica avviene una volta sola, alla costruzione, invece che a ogni utilizzo. I costrutti del DSL continuano ad
+accettare un `Double`, per non obbligare l'utente a una conversione esplicita, e costruiscono il `Chance` al loro
+interno.
 
 Infine `Simulation` fa da facciata: con `export` ripubblica sotto un unico nome le costruzioni definite nei vari
 moduli. Non le eredita e non le riscrive, le rende solo visibili da un punto solo, così l'utente ha un import
@@ -560,9 +538,8 @@ soltanto anche se il DSL è distribuito su più file.
 
 ### Configurazione e stato
 
-**Problema:** far avanzare una simulazione richiede di distinguere ciò che resta fisso per tutta l'esecuzione da ciò
-che cambia a ogni passo. Tenendoli insieme, ogni tick ricostruirebbe anche la parte che non cambia, e il riavvio
-sarebbe un ripristino invece che una rigenerazione.
+**Problema:** di una simulazione una parte resta fissa per tutta l'esecuzione e una parte cambia a ogni passo, e
+tenerle insieme costringe a ricostruire anche quello che non cambia.
 
 **Soluzione:** `SimulationConfig`, prodotta dal DSL e mai modificata, è separata da `SimulationState`, che contiene
 l'ambiente corrente, il tick, il prossimo identificatore disponibile e le permanenze nei punti di interesse. Il
@@ -578,9 +555,8 @@ private def nextAvailableId[S](agents: List[Agent[S]]): Int = agents
 
 ### Pipeline del tick
 
-**Problema:** un passo di simulazione deve far percepire, decidere, muovere, nascere, morire e comunicare tutta la
-popolazione. Farlo in un'unica attraversata renderebbe il risultato dipendente dall'ordine: un agente all'inizio
-della lista percepirebbe lo stato del tick precedente, uno alla fine uno stato già mezzo aggiornato.
+**Problema:** un tick deve far percepire, decidere, muovere, nascere, morire e comunicare tutta la popolazione,
+senza che il risultato dipenda dall'ordine in cui gli agenti vengono attraversati.
 
 **Soluzione:** il tick è diviso in **fasi separate**, ciascuna applicata a tutta la popolazione prima che cominci la
 successiva.
@@ -618,19 +594,16 @@ private def decide[S](environment: Environment[S], config: SimulationConfig[S])(
   Intent(config.rules.find(_.appliesTo(ctx)).map(_.newState(ctx)).fold(moved)(moved.withState), actions)
 ```
 
-La scelta è **una sola**: a ogni agente si applicano un comportamento e una regola, i primi dichiarati fra quelli
-compatibili con il suo stato. L'ordine di dichiarazione diventa così una priorità, ed è il motivo per cui il builder
-mette il default in fondo. L'alternativa, applicare tutti i costrutti compatibili, avrebbe messo nel motore una
-decisione su come combinare fra loro azioni provenienti da comportamenti diversi: preferiamo che quella
-combinazione la scriva l'utente con i combinatori, dove è visibile. Se nessuna regola è applicabile l'agente resta
-nello stato in cui è, e i due casi sono gestiti nella stessa espressione.
+A ogni agente si applicano un solo comportamento e una sola regola: i primi dichiarati fra quelli compatibili con il
+suo stato. L'ordine di dichiarazione vale quindi come priorità, ed è per questo che il builder mette il default in
+fondo. Applicare invece tutti i costrutti compatibili avrebbe richiesto al motore di decidere come combinare fra
+loro azioni provenienti da comportamenti diversi, mentre così quella combinazione resta scritta dall'utente con i
+combinatori. Se nessuna regola è applicabile l'agente conserva il proprio stato.
 
 ### Nascite, morti e messaggi
 
-**Problema:** le azioni di ciclo di vita hanno effetti che vanno oltre il singolo agente. Una nascita ha bisogno di
-un identificatore che non collida con quelli assegnati nello stesso tick; una morte deve togliere l'agente dalla
-popolazione senza però cancellare ciò che ha già fatto agli altri; un messaggio deve arrivare a un destinatario che
-potrebbe non essere ancora stato elaborato.
+**Problema:** nascita, morte e comunicazione hanno effetti che escono dal singolo agente, e vanno quindi coordinati
+sull'intera popolazione.
 
 **Soluzione:** l'evoluzione della popolazione è un `foldLeft` sugli intenti, che accumula sopravvissuti e nuovi nati
 in una struttura dedicata:
@@ -688,9 +661,8 @@ nella lista.
 
 ### Movimento e frontiera
 
-**Problema:** un comportamento può dichiarare più movimenti nello stesso tick, come fa lo stormo che somma più
-spinte, oppure non dichiararne nessuno. In più la posizione risultante deve rispettare i confini del mondo, che però
-sono gestiti dall'ambiente e non dal motore.
+**Problema:** un comportamento può chiedere più movimenti in un tick oppure nessuno, e la posizione che ne risulta
+deve rispettare i confini del mondo, che però non sono affare del motore.
 
 **Soluzione:** le velocità dichiarate si sommano, e se non ce ne sono si tiene quella corrente, così un agente senza
 istruzioni prosegue per inerzia invece di fermarsi di colpo:
@@ -717,8 +689,8 @@ gli torna indietro. Aggiungere una forma di spazio o una politica di frontiera n
 ## Simulazioni di esempio
 
 Le quattro simulazioni sono servite a mettere alla prova l'espressività del DSL. Ognuna esercita una combinazione
-diversa di funzionalità, e più di una volta scriverle ha fatto emergere lacune che hanno guidato l'evoluzione del DSL
-stesso: il combinatore `orElse`, per esempio, è nato dal bisogno di esprimere una ricerca con ripiego, dove la
+diversa di funzionalità, e più di una volta scriverle ha fatto emergere lacune che hanno guidato l'evoluzione del
+DSL stesso: il combinatore `orElse`, per esempio, è nato dal bisogno di esprimere una ricerca con ripiego, dove la
 strategia generica interviene solo se quella preferita non produce nulla.
 
 * **Epidemic** esercita le transizioni probabilistiche, le condizioni sul vicinato e il movimento differenziato per
@@ -735,7 +707,7 @@ strategia generica interviene solo se quella preferita non produce nulla.
 * **AlarmSpreading** esercita la propagazione e l'esaurimento dell'informazione, combinando le condizioni temporali
   sulla memoria con la fuga da un punto di interesse
 
-Limitandoci ai costrutti descritti in questa sezione, la parte comportamentale di una simulazione si presenta così:
+Limitandomi ai costrutti descritti in questa sezione, la parte comportamentale di una simulazione si presenta così:
 
 ```scala
 behavior:
@@ -750,8 +722,8 @@ rules:
   Healthy whenAgentIs Recovered iff chanceOf(immunityLoss)
 ```
 
-Le stesse dichiarazioni, scritte usando direttamente le astrazioni del dominio e senza passare per il DSL, richiedono
-di istanziare ogni comportamento e ogni regola come oggetto e di raccoglierli in liste:
+Le stesse dichiarazioni, scritte usando direttamente le astrazioni del dominio e senza passare per il DSL,
+richiedono di istanziare ogni comportamento e ogni regola come oggetto e di raccoglierli in liste:
 
 ```scala
 val behaviors: List[Behavior[Health]] = List(
