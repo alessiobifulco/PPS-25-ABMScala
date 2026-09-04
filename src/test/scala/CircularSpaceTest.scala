@@ -1,0 +1,86 @@
+import domain.{CircularSpace, P2d, V2d, BoundaryPolicy, Shape}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
+
+class CircularSpaceTest extends AnyFlatSpec, Matchers:
+
+  private val center = P2d(0.0, 0.0)
+  private val radius = 10.0
+  private val space = CircularSpace(center, radius)
+
+  "CircularSpace" should "accept a positive radius" in:
+    space.radius shouldBe radius
+
+  it should "reject a non-positive radius" in:
+    an[IllegalArgumentException] should be thrownBy:
+      CircularSpace(center, 0.0)
+    an[IllegalArgumentException] should be thrownBy:
+      CircularSpace(center, -1.0)
+
+  it should "contain the center" in:
+    space.contains(center) shouldBe true
+
+  it should "contain an internal position" in:
+    space.contains(P2d(5.0, 5.0)) shouldBe true
+
+  it should "contain a position on the boundary" in:
+    space.contains(P2d(radius, 0.0)) shouldBe true
+
+  it should "reject a position outside the circle" in:
+    space.contains(P2d(radius + 1.0, 0.0)) shouldBe false
+
+  it should "leave an internal position unchanged when clamping" in:
+    val position = P2d(5.0, 5.0)
+    space.clamp(position) shouldBe position
+
+  it should "clamp an external position to the circle boundary" in:
+    space.clamp(P2d(20.0, 0.0)) shouldBe P2d(radius, 0.0)
+
+  it should "clamp an external diagonal position to the circle boundary" in:
+    val position = P2d(20.0, 20.0)
+    val clamped = space.clamp(position)
+    space.contains(clamped) shouldBe true
+    clamped.x shouldBe (radius / math.sqrt(2))
+    clamped.y shouldBe (radius / math.sqrt(2))
+
+  it should "bounce on the right boundary" in:
+    val position = P2d(radius, 0.0)
+    val velocity = V2d(2.0, 1.0)
+    space.bounce(position, velocity) shouldBe (P2d(radius, 0.0), V2d(-2.0, 1.0))
+
+  it should "bounce on the top boundary" in:
+    val position = P2d(0.0, radius)
+    val velocity = V2d(1.0, 2.0)
+    space.bounce(position, velocity) shouldBe (P2d(0.0, radius), V2d(1.0, -2.0))
+
+  it should "bounce correctly when exactly at the center (distance == 0)" in:
+    space.bounce(center, V2d(1.0, 1.0)) shouldBe (center, V2d(1.0, 1.0))
+
+  it should "stop an external position" in:
+    val position = P2d(20.0, 0.0)
+    val velocity = V2d(2.0, 1.0)
+    space.stop(position, velocity) shouldBe (P2d(radius, 0.0), V2d.zero)
+
+  it should "stop an agent moving outwards on the boundary" in:
+    val position = P2d(radius, 0.0)
+    val velocity = V2d(2.0, 1.0)
+    space.stop(position, velocity) shouldBe (position, V2d.zero)
+
+  it should "preserve an inward velocity on the boundary" in:
+    val position = P2d(radius, 0.0)
+    val velocity = V2d(-2.0, 1.0)
+    space.stop(position, velocity) shouldBe (position, velocity)
+
+  it should "wrap an external position to the opposite side" in:
+    val position = P2d(20.0, 0.0)
+    val velocity = V2d(2.0, 1.0)
+    val (newPos, newVel) = BoundaryPolicy.wrap(position, velocity, space)
+    newPos shouldBe P2d(-10.0, 0.0)
+    newVel shouldBe velocity
+
+  it should "generate a random position within the circle" in:
+    val pos = space.randomPosition
+    space.contains(pos) shouldBe true
+
+  it should "return the correct Shape enum" in:
+    space.shape shouldBe Shape.Circle(center, radius)

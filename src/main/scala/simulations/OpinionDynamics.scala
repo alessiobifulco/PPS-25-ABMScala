@@ -1,0 +1,65 @@
+package simulations
+
+import domain.*
+import engine.SimulationConfig
+import gui.Renderable
+import dsl.*
+import dsl.Simulation.*
+
+import java.awt.Color
+
+/** A simulation scenario modeling social polarization and consensus. Agents with similar opinions physically cluster
+  * together (flocking) while avoiding differing views, progressively averaging their beliefs until consensus or
+  * tribalism emerges.
+  */
+object OpinionDynamics:
+
+  /** A custom continuous state representing a measurable opinion (e.g., from 0.0 to 10.0).
+    */
+  case class Opinion(value: Double)
+
+  private val populationSize = 200
+  private val speed = 2.0
+  private val perceptionRadius = 60.0
+  private val influenceRadius = 20.0
+  private val similarityThreshold = 2.0
+  private val convergenceRate = 0.02
+  private val separationRadius = 15.0
+  private val opinionRange = 10.0
+  private val spaceCenter = P2d(300, 300)
+  private val spaceRadius = 300.0
+
+  /** The given instance that bridges the custom [[Opinion]] type with the DSL's mathematical operations, enabling
+    * continuous transition rules.
+    */
+  given Continuous[Opinion] with
+    override def extract(state: Opinion): Double = state.value
+    override def update(state: Opinion, value: Double): Opinion = state.copy(value = value)
+
+  private def similar(a: Opinion, b: Opinion): Boolean = math.abs(a.value - b.value) <= similarityThreshold
+
+  private def different(a: Opinion, b: Opinion): Boolean = !similar(a, b)
+
+  /** The declarative blueprint of the simulation using the DSL.
+    */
+  val config: SimulationConfig[Opinion] = Simulation.of[Opinion]:
+    environment:
+      space(CircularSpace(spaceCenter, spaceRadius)) withBoundary wrap
+      perception(perceptionRadius)
+      population(populationSize) eachBeing Opinion(math.random() * opinionRange)
+    behavior:
+      asDefault(follow[Opinion](similar) avoid different movingAt speed keepingApart separationRadius)
+    rules:
+      convergeTowardsAverage[Opinion](within = influenceRadius, among = similar, atRate = convergenceRate)
+
+  given Renderable[Opinion] with
+    override def colorOf(state: Opinion): Color =
+      val ratio = (state.value / opinionRange).max(0).min(1)
+      Color(ratio.toFloat, 0f, (1 - ratio).toFloat)
+
+    override def labelOf(state: Opinion): String = state.value match
+      case v if v < 2.0 => "Very Low"
+      case v if v < 4.0 => "Low"
+      case v if v < 6.0 => "Medium"
+      case v if v < 8.0 => "High"
+      case _            => "Very High"
