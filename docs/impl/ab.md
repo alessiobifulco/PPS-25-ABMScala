@@ -758,4 +758,4 @@ problema si vede solo guardando l'esecuzione. Con il DSL quelle due situazioni n
 registrazione passa dai combinatori e l'ordinamento lo fa il builder. Restano naturalmente possibili altri errori,
 per esempio una condizione logicamente sbagliata, che nessun controllo di tipo può intercettare.
 
-[Indice](../0-index.md) | [Capitolo Precedente](../5-design.md) | [Capitolo Successivo](../7-testing.md)
+[Indice](../0-index.md) | [Capitolo Precedente](../6-implementation.md) | [Capitolo Successivo](../7-testing.md)
