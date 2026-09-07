@@ -124,3 +124,5 @@ simulazione, sulle politiche di confine e sulle strategie di calcolo dei vicini.
   successivo, essendo prerequisito per il motore di simulazione
 - Introdurre nuove astrazioni solo a fronte di un utilizzatore concreto, per evitare di non
   riuscire a completare gli aspetti concreti necessari
+
+[Backlog](backlog.md) | [Sprint Successvo](sprint2.md)

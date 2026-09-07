@@ -194,3 +194,5 @@ consegnare un framework con un dominio coerente. Le ore rimanenti a fine sprint 
 
 Essendo l'ultimo sprint del progetto, gli spunti emersi non si traducono in action item per
 un'iterazione successiva ma confluiscono nella retrospettiva finale del report.
+
+[Backlog](backlog.md) | [Sprint Precedente](sprint3.md) 

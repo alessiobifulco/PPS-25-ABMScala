@@ -156,3 +156,5 @@ planning è stato sufficiente ad assorbirla.
   configurabilità dal DSL
 - Prevedere test sul DSL e non solo l'osservazione a schermo, dato che due difetti su due sono
   arrivati fino all'esecuzione
+
+[Backlog](backlog.md) | [Sprint Precedente](sprint2.md) | [Sprint Successvo](sprint4.md)

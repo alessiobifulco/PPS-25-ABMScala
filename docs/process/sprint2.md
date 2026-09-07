@@ -136,3 +136,5 @@ grafica.
   richiesto dallo stakeholder in sede di review
 - Introdurre nuove astrazioni solo a fronte di un utilizzatore concreto che le richieda,
   riprendendo l'action item già lasciato dallo Sprint 1
+
+[Backlog](backlog.md) | [Sprint Precedente](sprint1.md) | [Sprint Successvo](sprint3.md)
