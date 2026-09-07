@@ -102,8 +102,8 @@ Anche lo spazio circolare implementa `Toroidal`: `wrap` trasferisce una posizion
 
 **Soluzione:** ho definito `BoundaryPolicy` come `enum` con tre casi: `bounce`, che riflette il movimento dell'agente, `stop`, che lo arresta quando raggiunge il confine, e `wrap`, che lo trasferisce sul lato opposto quando lo spazio è toroidale.
 
-Il metodo `apply` delega l'effettiva gestione alla geometria dello spazio. La politica `wrap` è valida soltanto per spazi che implementano Toroidal;
-la costruzione di Environment verifica questa compatibilità e rifiuta configurazioni non valide. La politica richiesta e la geometria che la realizza restano così separate.
+Il metodo `apply` delega l'effettiva gestione alla geometria dello spazio. La politica `wrap` è valida soltanto per spazi che implementano `Toroidal`;
+la costruzione di `Environment` verifica questa compatibilità e rifiuta configurazioni non valide. La politica richiesta e la geometria che la realizza restano così separate.
 
 ### Environment
 
@@ -135,7 +135,7 @@ a `Toroidal` riguarda il riposizionamento degli agenti tramite `wrap`, non il ca
 vicini attraverso il confine toroidale potrebbero non essere rilevati come vicini.
 
 La strategia a griglia può essere selezionata esplicitamente, mentre quella `bruteForce` è fornita come default
-tramite la given instance `defaultStrategy`. La scelta di utilizzare una type class permette all'`Engine` di dipendere soltanto dall'astrazione
+tramite la given instance `defaultStrategy`. La scelta di utilizzare una `type class` permette all'`Engine` di dipendere soltanto dall'astrazione
 della strategia.
 
 La strategia `grid` riduce il numero di candidati esaminati limitando la ricerca alle celle spazialmente vicine, mentre `bruteForce`
@@ -186,7 +186,7 @@ utilizzato dalle condizioni del DSL, ma non contiene alcuna logica comportamenta
 
 Le configurazioni intermedie `SpaceConfig` e `PopulationConfig` permettono di completare le impostazioni con una sintassi concatenabile, grazie all'uso di `infix`.
 
-La funzione `environment` accetta un blocco di tipo `EnvironmentBuilder[S] ?=> Unit`, una context function di Scala 3. Questo significa che il builder non viene mai passato esplicitamente dall'utente: il compilatore lo inietta automaticamente nel contesto del blocco, rendendo disponibili le parole del DSL senza alcun riferimento esplicito all'oggetto di configurazione:
+La funzione `environment` accetta un blocco di tipo `EnvironmentBuilder[S] ?=> Unit`, una `context function` di Scala 3. Questo significa che il builder non viene mai passato esplicitamente dall'utente: il compilatore lo inietta automaticamente nel contesto del blocco, rendendo disponibili le parole del DSL senza alcun riferimento esplicito all'oggetto di configurazione:
 
 ```scala
 environment:
@@ -240,7 +240,7 @@ La scelta di rappresentare `update` come `State[Model[S], Unit]` invece di una s
 della trasformazione dalla sua esecuzione. La computazione viene costruita e restituita senza essere applicata immediatamente: è `SimulationWindow` a
 decidere quando eseguirla chiamando `apply` sul modello corrente. Questo rende `Mvu` completamente puro e testabile senza aprire alcuna finestra.
 
-La type class `Monad[F[_]]` definisce le operazioni `unit`, `flatMap` e `map` su un tipo costruttore generico. La `State` monad ne è un'implementazione
+La `type class` `Monad[F[_]]` definisce le operazioni `unit`, `flatMap` e `map` su un tipo costruttore generico. La `State` monad ne è un'implementazione
 concreta: `unit` restituisce una computazione che non modifica lo stato, mentre `flatMap` concatena due computazioni in sequenza, passando lo stato prodotto
 dalla prima alla seconda. Questo permette di comporre trasformazioni come `restart.flatMap(_ => run)` in modo dichiarativo.
 
@@ -258,7 +258,7 @@ il timer viene arrestato, la finestra viene eliminata e viene invocata la callba
 
 **Problema:** la scena deve rappresentare spazi di forma differente e rendere riconoscibili gli agenti anche quando il tipo di stato è definito dall'utente.
 
-**Soluzione:** `SimulationPanel` riceve le type class `Renderable[S]` e `POIRenderable`. Il pannello disegna il confine rettangolare o circolare in base a `Shape`, rappresenta i punti di interesse come regioni circolari semitrasparenti e disegna ogni agente come un elemento colorato con contorno nero.
+**Soluzione:** `SimulationPanel` riceve le `type class` `Renderable[S]` e `POIRenderable`. Il pannello disegna il confine rettangolare o circolare in base a `Shape`, rappresenta i punti di interesse come regioni circolari semitrasparenti e disegna ogni agente come un elemento colorato con contorno nero.
 
 Il colore associato allo stato dell'agente è delegato a `Renderable[S]`, mentre il colore dei punti di interesse è delegato a `POIRenderable`. Il metodo `render`
 conserva il modello da visualizzare e richiede il ridisegno del pannello tramite `repaint()`.
@@ -357,7 +357,7 @@ colore all'intervallo percentuale corrispondente. Un controllo indipendente perm
 
 **Problema:** il package `gui` deve poter visualizzare stati e punti di interesse di simulazioni diverse senza imporre ereditarietà o modifiche ai tipi definiti dall'utente.
 
-**Soluzione:** `Renderable[S]` definisce il colore e l'etichetta di uno stato, mentre `POIRenderable` definisce il colore dei punti di interesse. Entrambe le type class disaccoppiano il tipo dei dati dalla loro rappresentazione e permettono di fornire implementazioni differenti per simulazioni differenti.
+**Soluzione:** `Renderable[S]` definisce il colore e l'etichetta di uno stato, mentre `POIRenderable` definisce il colore dei punti di interesse. Entrambe le `type class` disaccoppiano il tipo dei dati dalla loro rappresentazione e permettono di fornire implementazioni differenti per simulazioni differenti.
 
 Quando non viene fornita una personalizzazione per i `POI`, viene utilizzata un'istanza di default che li rappresenta in colore grigio.
 
@@ -383,13 +383,13 @@ la logica dei componenti grafici esistenti: è sufficiente fornire una nuova imp
 La `GUI` non accede direttamente ai dettagli interni del dominio, ma riceve la configurazione e lo stato prodotti dall'`Engine`. Il flusso complessivo è il seguente:
 
 1. `MainMenu` presenta le simulazioni disponibili;
-2. `SimulationWindow` inizializza il modello MVU;
+2. `SimulationWindow` inizializza il modello `MVU`;
 3. il timer invia periodicamente `Msg.Tick`;
 4. `Mvu.update` produce una nuova versione del `Model`;
 5. `SimulationPanel` ridisegna la scena;
 6. `StatisticsPanel` aggiorna i dati quantitativi.
 
-La separazione tra modello, aggiornamento e visualizzazione consente di verificare la logica `MVU` indipendentemente dai componenti Swing, mentre le type class di rendering mantengono la `GUI` indipendente dal tipo concreto dello stato degli agenti.
+La separazione tra modello, aggiornamento e visualizzazione consente di verificare la logica `MVU` indipendentemente dai componenti `Swing`, mentre le `type class` di rendering mantengono la `GUI` indipendente dal tipo concreto dello stato degli agenti.
 
 ## Dettagli implementativi trasversali
 
@@ -467,10 +467,9 @@ indefinitamente durante un'esecuzione prolungata.
 Quando uno stato non è più presente nella popolazione corrente, la relativa categoria viene comunque conservata nella legenda e nello storico
 con valore percentuale pari a zero. Questo evita che una linea del grafico scompaia improvvisamente e mantiene confrontabili i diversi stati nel tempo.
 
-Il riavvio della simulazione, tramite `Msg.RestartAndRun`, reinizializza il modello prodotto dall’`Engine`. Le statistiche correnti vengono
+Il riavvio della simulazione, tramite `Msg.RestartAndRun`, reinizializza il modello prodotto dall’`Engine`; le statistiche correnti vengono
 quindi ricalcolate sulla nuova simulazione e rimangono coerenti con essa. Lo storico del grafico, invece, appartiene allo stato locale di `StatisticsPanel`
-e conserva anche i dati precedenti al riavvio. Questa scelta permette di distinguere visivamente l’evoluzione precedente da quella successiva, rendendo
-riconoscibile il punto in cui la simulazione è stata riavviata.
+e conserva anche i dati precedenti al riavvio, che restano quindi concatenati a quelli della nuova esecuzione.
 
 ### Separazione tra stato della simulazione e stato della visualizzazione
 
@@ -487,7 +486,7 @@ il comportamento al confine, `Environment` aggrega gli elementi del mondo e `Nei
 queste capacità attraverso una sintassi dichiarativa e produce la configurazione utilizzata dal resto del sistema.
 
 Sul lato grafico, `SimulationWindow` coordina il ciclo di esecuzione, `Mvu` gestisce le trasformazioni del modello, `SimulationPanel` rappresenta la
-scena e `StatisticsPanel` fornisce una lettura quantitativa dell'evoluzione. Le type class `Renderable` e `POIRenderable` mantengono la rappresentazione indipendente
+scena e `StatisticsPanel` fornisce una lettura quantitativa dell'evoluzione. Le `type class` `Renderable` e `POIRenderable` mantengono la rappresentazione indipendente
 dal dominio applicativo.
 
 Il risultato è una `GUI` riutilizzabile per simulazioni con stati, geometrie e punti di interesse differenti, senza duplicare la logica dell'`Engine` e senza imporre

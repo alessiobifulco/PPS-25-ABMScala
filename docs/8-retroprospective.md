@@ -67,18 +67,8 @@ richiesto di gestire con attenzione il confine tra lo stato immutabile della sim
 componenti grafici. L’introduzione della `State monad` ha permesso di rappresentare le trasformazioni del modello come
 computazioni componibili, mantenendo la logica di aggiornamento separata dalla gestione della finestra e dei pannelli.
 
-Una seconda difficoltà ha riguardato la progettazione delle astrazioni spaziali e della ricerca dei vicini. Il sistema
-doveva supportare geometrie diverse, politiche di confine differenti e algoritmi alternativi per il calcolo dei vicini
-senza vincolare l’`Engine` a una particolare implementazione. È stato quindi necessario coordinare `Space`, `BoundaryPolicy`,
-`Toroidal`, `Environment` e `NeighborStrategy`, mantenendo separate la geometria dell’ambiente, la gestione del movimento e
-la ricerca degli agenti vicini.
-
-Infine, una difficoltà significativa è stata imparare a utilizzare insieme le funzionalità avanzate di Scala 3
-e il paradigma funzionale. Ho dovuto comprendere il funzionamento di `context function`, `type class`, `given` e
-`opaque type` per mantenere il framework generico e facilmente configurabile. Inoltre, l’uso di strutture immutabili
-ha richiesto di creare nuovi valori a ogni aggiornamento, invece di modificare direttamente quelli esistenti. Anche se 
-inizialmente questo approccio ha aumentato la complessità del lavoro, ha portato a un codice più modulare, riutilizzabile 
-e facile da verificare.
+Anche la curva di apprendimento su Scala 3 è stata rilevante: comprendere a fondo `context function`, `type class`, `given` e
+`opaque type` ha richiesto tempo ma ha permesso di mantenere il framework generico sullo stato dell'agente e facilmente configurabile.
 
 ## Stato attuale
 
