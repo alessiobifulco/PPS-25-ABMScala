@@ -123,30 +123,35 @@ object ConditionalBehavior:
   def moveAwayFrom[S](target: P2d, speed: Double): ActionSource[S] =
     ctx => List(Move((ctx.focus.position - target).normalized * speed))
 
-  /** Generates a movement action towards the most recent POI sighting kept in memory, if any.
+  /** Generates a movement action towards the most recent POI sighting kept in memory. An agent with no memory, or with
+    * no sighting recorded yet, simply produces no action at all: the absent position is turned into an empty list, so
+    * that the missing case never needs an explicit branch.
     *
     * @param speed
     *   The movement magnitude.
     */
   def moveTowardsRemembered[S](speed: Double): ActionSource[S] = ctx =>
-    rememberedPosition(ctx) match
-      case Some(position) => moveTowards(position, speed)(ctx)
-      case _              => List.empty
+    for
+      position <- rememberedPosition(ctx).toList
+      action <- moveTowards(position, speed)(ctx)
+    yield action
 
-  /** Generates a movement action away from the most recent POI sighting kept in memory, if any.
+  /** Generates a movement action away from the most recent POI sighting kept in memory, with the same treatment of the
+    * missing sighting described in [[moveTowardsRemembered]].
     *
     * @param speed
     *   The movement magnitude.
     */
   def moveAwayFromRemembered[S](speed: Double): ActionSource[S] = ctx =>
-    rememberedPosition(ctx) match
-      case Some(position) => moveAwayFrom(position, speed)(ctx)
-      case _              => List.empty
+    for
+      position <- rememberedPosition(ctx).toList
+      action <- moveAwayFrom(position, speed)(ctx)
+    yield action
 
-  /** Generates a memory recording action whenever the agent steps inside any of the specified Points of Interest.
+  /** Generates a memory recording action for every specified Point of Interest currently containing the agent.
     */
-  def rememberSightings[S](poiList: POI*): ActionSource[S] = ctx =>
-    poiList.toList.filter(poi => ctx.isInside(poi)).map(poi => Remember(MemoryEvent.Sighting(poi.id, poi.position)))
+  def rememberSightings[S](poiList: POI*): ActionSource[S] =
+    ctx => for poi <- poiList.toList if ctx.isInside(poi) yield Remember(MemoryEvent.Sighting(poi.id, poi.position))
 
   /** Generates an action to halt the movement, requesting a null velocity.
     */
@@ -160,21 +165,27 @@ object ConditionalBehavior:
     */
   def spawn[S](state: S): ActionSource[S] = _ => List(Spawn(state))
 
-  /** Generates communication actions to share the agent's latest belief with all perceived neighbors.
+  /** Generates communication actions to share the agent's latest belief with all perceived neighbors. The two
+    * generators compose an optional belief with a list of neighbors: an agent with nothing to say, or with nobody
+    * around to listen, yields no action, without the empty case ever being spelled out.
     */
   def tellNeighbours[S]: ActionSource[S] = ctx =>
-    ctx.focus.memory.flatMap(_.latest) match
-      case Some(belief) => ctx.neighbors.map(neighbor => Tell(neighbor.id, belief.event))
-      case _            => List.empty
+    for
+      belief <- ctx.focus.memory.flatMap(_.latest).toList
+      neighbor <- ctx.neighbors
+    yield Tell(neighbor.id, belief.event)
 
   /** Generates a memory-learning action by adopting the most recent belief heard from neighbors.
     */
-  def learnFromNeighbours[S]: ActionSource[S] = ctx =>
-    ctx.heardBeliefs.maxByOption(_.at) match
-      case Some(belief) => List(Remember(belief.event))
-      case _            => List.empty
+  def learnFromNeighbours[S]: ActionSource[S] =
+    ctx => for belief <- ctx.heardBeliefs.maxByOption(_.at).toList yield Remember(belief.event)
 
+  /** Walks the chain of optional steps leading to the last remembered position: the agent may have no memory at all,
+    * its memory may hold no sighting, and only a [[MemoryEvent.Sighting]] carries a position. The refutable pattern in
+    * the generator discards anything that does not match, so the whole chain collapses into a single expression.
+    */
   private def rememberedPosition[S](ctx: AgentContext[S]): Option[P2d] =
-    ctx.focus.memory.flatMap(_.sightings.lastOption).map(_.event) match
-      case Some(MemoryEvent.Sighting(_, position)) => Some(position)
-      case _                                       => Option.empty
+    for
+      memory <- ctx.focus.memory
+      case Belief(MemoryEvent.Sighting(_, position), _) <- memory.sightings.lastOption
+    yield position
