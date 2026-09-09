@@ -152,7 +152,8 @@ L'intero progetto è stato sviluppato seguendo principi di programmazione funzio
   trasformazioni e il DSL le proprie parole chiave: essendo `infix`, `whenAgentIs`, `iff`, `withBoundary` e `withOne`
   si scrivono senza punto né parentesi, e la dichiarazione risultante si legge come una frase
 
-* **Type class**: `Continuous` rende idoneo alle regole continue un qualunque tipo di stato, mentre `Renderable` e
+* **Type class**: `Continuous` rende idoneo alle regole continue un qualunque tipo di stato ed è richiesta come
+  **context bound** (`[S: Continuous]`), recuperata poi con `summon` nel punto d'uso, mentre `Renderable` e
   `POIRenderable` ne definiscono l'aspetto grafico, tutte senza imporre vincoli di ereditarietà al tipo dell'utente.
   `Monad` è astratta su un costruttore di tipo (`Monad[M[_]]`) e riceve la propria istanza da `State`.
   `NeighborStrategy` e `POIRenderable` sono fornite come **given instance** di default, così da restare configurabili
@@ -169,6 +170,10 @@ L'intero progetto è stato sviluppato seguendo principi di programmazione funzio
 * **Monade di stato**: l'aggiornamento dell'interfaccia è espresso come `State[Model[S], Unit]`, permettendo di
   comporre più trasformazioni con `flatMap` e mantenendo funzionale la logica di un componente per sua natura
   imperativo
+
+* **Varianza**: `Action[+S]` è covariante nel tipo dello stato di dominio. `Spawn` è l'unico caso che ne trasporta
+  un valore, mentre tutti gli altri appartengono ad `Action[Nothing]`, il tipo bottom: la covarianza li rende quindi
+  validi in qualunque simulazione, evitando di dover replicare il vocabolario delle azioni per ogni stato
 
 * **Enum e pattern matching esaustivo**: azioni, messaggi, politiche di frontiera, eventi di memoria e forme dello
   spazio sono insiemi chiusi, il che consente al compilatore di verificare che ogni caso sia gestito e trasforma in

@@ -263,7 +263,9 @@ l'identificatore lo assegna il motore, che è l'unico a sapere quali sono già i
 dell'agente e non ha parametri perché non ammette varianti.
 
 Il parametro di tipo è **covariante**. L'unico caso che porta con sé uno stato di dominio è `Spawn`; tutti gli altri
-non dipendono da `S`, e la covarianza permette di usarli qualunque sia lo stato della simulazione.
+non dipendono da `S` e appartengono quindi ad `Action[Nothing]`. Poiché `Nothing` è il tipo bottom, la covarianza fa
+sì che `Action[Nothing]` sia sottotipo di `Action[S]` per qualunque `S`: `Die()` o `Move(v)` scritti una volta sola
+valgono in ogni simulazione, senza doverli ridefinire per ciascuno stato di dominio.
 
 Essendo l'insieme chiuso, aggiungere un tipo di effetto si riduce a un caso in più da interpretare in un solo punto,
 e il compilatore segnala i `match` rimasti indietro.
@@ -353,6 +355,35 @@ infix def whenAgentIs(state: S)(using builder: BehaviorsBuilder[S]): Unit = buil
 
 Il risultato è che una sola riga descrive un comportamento per intero: la composizione delle sorgenti, l'eventuale
 condizione che la subordina e lo stato a cui si applica stanno nella stessa frase, letta da sinistra a destra.
+
+Le sorgenti primitive hanno un tratto comune: quasi tutte possono non produrre nulla, perché l'agente non ha memoria,
+non ha vicini o non si trova dentro nessun punto di interesse. Trattare quei casi con un `match` significava scrivere
+ogni volta un ramo `case _ => List.empty` che non dice niente, e per questo li ho espressi come **for-comprehension**,
+dove il caso vuoto non va nominato perché è già il risultato naturale di un generatore senza elementi:
+
+```scala
+def tellNeighbours[S]: ActionSource[S] = ctx =>
+  for
+    belief <- ctx.focus.memory.flatMap(_.latest).toList
+    neighbor <- ctx.neighbors
+  yield Tell(neighbor.id, belief.event)
+```
+
+I due generatori compongono contenitori diversi: un `Option`, che rappresenta la credenza che l'agente potrebbe non
+avere, convertito in lista, e la lista dei vicini. Se manca la credenza oppure non ci sono vicini il risultato è
+vuoto, e nessuna delle due condizioni compare come controllo esplicito. Lo stesso vale per il recupero dell'ultima
+posizione ricordata, dove la catena di passi opzionali si chiude su un pattern rifiutabile nel generatore:
+
+```scala
+private def rememberedPosition[S](ctx: AgentContext[S]): Option[P2d] =
+  for
+    memory <- ctx.focus.memory
+    case Belief(MemoryEvent.Sighting(_, position), _) <- memory.sightings.lastOption
+  yield position
+```
+
+L'agente può non avere memoria, la memoria può non contenere avvistamenti, e solo un `Sighting` porta con sé una
+posizione: tre motivi di fallimento diversi che una sola espressione attraversa senza ramificarsi.
 
 ### Comportamento di stormo
 
@@ -465,16 +496,19 @@ punto in cui si usa la regola continua, non a esecuzione.
 La regola di convergenza ha valori di default per il raggio di influenza, il criterio di affinità e il tasso:
 
 ```scala
-def convergeTowardsAverage[S](
+def convergeTowardsAverage[S: Continuous](
     within: Double = Double.PositiveInfinity,
     among: (S, S) => Boolean = (_: S, _: S) => true,
     atRate: Double = 1.0
-)(using continuous: Continuous[S], builder: RulesBuilder[S]): Unit =
+)(using builder: RulesBuilder[S]): Unit =
+  val continuous = summon[Continuous[S]]
 ```
 
-I due parametri `using` stanno in una lista separata perché non sono dati da trasformare ma contesto: la type class
-dice come leggere lo stato e il builder dice dove registrare la regola, e in entrambi i casi l'utente non ha motivo
-di scriverli a mano.
+La type class è richiesta come **context bound**: `[S: Continuous]` dice che il tipo di stato è ammesso solo se
+l'adattatore corrispondente è reperibile nello scope, senza dovergli dare un nome nella firma. Il nome serve però nel
+corpo, dove le due operazioni vengono effettivamente chiamate, e lì lo recupero con `summon`. Il builder resta invece
+un `using` esplicito, in una lista separata: non è un dato da trasformare ma contesto, e come la type class non è
+qualcosa che l'utente abbia motivo di scrivere a mano.
 
 Il corpo calcola la media dei vicini influenti e sposta il valore dell'agente verso di essa in proporzione al tasso.
 La regola è subordinata alla presenza di almeno un vicino influente, perché altrimenti la media andrebbe calcolata
@@ -631,7 +665,7 @@ viene aggiornato inutilmente:
 
 ```scala
 private def survivors[S](intent: Intent[S], tick: Int): List[Agent[S]] =
-  if intent.actions.exists(isDeath) then List.empty
+  if intent.actions.contains(Die()) then List.empty
   else List(intent.actions.foldLeft(intent.agent)((agent, action) => applying(agent, action, tick)))
 ```
 
@@ -668,9 +702,8 @@ deve rispettare i confini del mondo, che però non sono affare del motore.
 istruzioni prosegue per inerzia invece di fermarsi di colpo:
 
 ```scala
-private def velocityOf[S](actions: List[Action[S]], current: V2d): V2d = moves(actions) match
-  case Nil        => current
-  case velocities => velocities.foldLeft(V2d.zero)(_ + _)
+private def velocityOf[S](actions: List[Action[S]], current: V2d): V2d = moves(actions).reduceOption(_ + _)
+  .getOrElse(current)
 ```
 
 La posizione così ottenuta viene passata alla politica di frontiera, che restituisce la coppia posizione/velocità

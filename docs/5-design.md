@@ -27,12 +27,12 @@ Le implementazioni fornite sono `RectangularSpace` e `CircularSpace`. Il primo r
 La forma geometrica è descritta dall'enum `Shape`, utilizzato anche dalla GUI per determinare come disegnare il confine dell'ambiente.
 
 - **Scelte di design**:
-  - la distinzione tra posizione e vettore non è soltanto formale, ma semantica: impedisce di sommare due posizioni e rende la differenza tra posizioni un vettore;
-  - il trait `Space` astrae la geometria dal resto del modello, così che l'engine possa applicare le operazioni spaziali senza conoscere la forma concreta;
-  - `BoundaryPolicy` separa la scelta del comportamento ai confini dalla geometria dello spazio;
-  - `Toroidal` rappresenta separatamente la capacità di effettuare il wrap, disponibile soltanto per gli spazi che la supportano;
-  - `Shape` costituisce una descrizione chiusa delle forme supportate e consente di utilizzare il pattern matching per gestire separatamente rettangoli e cerchi;
-  - le operazioni geometriche restituiscono nuovi valori invece di modificare lo spazio o gli agenti, mantenendo l'immutabilità delle strutture del dominio.
+    - la distinzione tra posizione e vettore non è soltanto formale, ma semantica: impedisce di sommare due posizioni e rende la differenza tra posizioni un vettore;
+    - il trait `Space` astrae la geometria dal resto del modello, così che l'engine possa applicare le operazioni spaziali senza conoscere la forma concreta;
+    - `BoundaryPolicy` separa la scelta del comportamento ai confini dalla geometria dello spazio;
+    - `Toroidal` rappresenta separatamente la capacità di effettuare il wrap, disponibile soltanto per gli spazi che la supportano;
+    - `Shape` costituisce una descrizione chiusa delle forme supportate e consente di utilizzare il pattern matching per gestire separatamente rettangoli e cerchi;
+    - le operazioni geometriche restituiscono nuovi valori invece di modificare lo spazio o gli agenti, mantenendo l'immutabilità delle strutture del dominio.
 
 - **Casi degeneri**: la normalizzazione di un `V2d` di lunghezza nulla restituisce il vettore nullo, evitando valori non definiti nelle operazioni del DSL e nelle simulazioni che utilizzano il calcolo delle direzioni.
 
@@ -82,17 +82,17 @@ mentre `grid` costruisce un indice spaziale e limita i confronti agli agenti pre
 celle pertinenti.
 
 - **Scelte di design**:
-  - `Environment` aggrega spazio, agenti, politica dei confini e `POI`, mantenendo separata la
-    descrizione dell'ambiente dalla logica delle simulazioni;
-  - `BoundaryPolicy` separa la scelta del comportamento al confine dalla geometria concreta
-    dello spazio;
-  - `NeighborStrategy` astrae l'algoritmo di ricerca dei vicini e permette di scegliere tra
-    l'implementazione `bruteForce` e quella indicizzata `grid`;
-  - l'object `NeighborStrategy` fornisce una strategia predefinita, mantenendo comunque la
-    possibilità di configurare esplicitamente l'algoritmo;
-  - `withAgents` e `withPois` restituiscono nuove versioni dell'ambiente senza modificarne
-    l'istanza originale.
-  
+    - `Environment` aggrega spazio, agenti, politica dei confini e `POI`, mantenendo separata la
+      descrizione dell'ambiente dalla logica delle simulazioni;
+    - `BoundaryPolicy` separa la scelta del comportamento al confine dalla geometria concreta
+      dello spazio;
+    - `NeighborStrategy` astrae l'algoritmo di ricerca dei vicini e permette di scegliere tra
+      l'implementazione `bruteForce` e quella indicizzata `grid`;
+    - l'object `NeighborStrategy` fornisce una strategia predefinita, mantenendo comunque la
+      possibilità di configurare esplicitamente l'algoritmo;
+    - `withAgents` e `withPois` restituiscono nuove versioni dell'ambiente senza modificarne
+      l'istanza originale.
+
 ![Environment Diagram](img/12-enviroment.png)
 
 ### Point of Interest
@@ -102,9 +102,9 @@ Il `Point of Interest` è modellato dalla `case class` **`POI`** e rappresenta u
 La verifica di appartenenza è effettuata confrontando la distanza tra la posizione dell'agente e il centro del punto con il relativo raggio. L'Engine aggiorna a ogni tick la mappa delle permanenze, incrementando il conteggio quando l'agente rimane all'interno del POI e azzerandolo quando ne esce. La condizione `settledIn` utilizza queste informazioni per verificare se è stato raggiunto l'`activationDelay` previsto dal punto di interesse e distinguere così la sosta effettiva dal semplice attraversamento.
 
 - **Scelte di design**:
-  - il `POI` è mantenuto indipendente dalla logica degli agenti e dalla rappresentazione grafica. La sua presenza nel dominio consente al DSL di esprimere condizioni spaziali e temporali senza introdurre comportamenti specializzati nell'Engine.
-  - `PoiId` è definito come opaque type, evitando di confondere l'identificatore di un `POI`
-       con un intero generico senza introdurre costi a runtime.
+    - il `POI` è mantenuto indipendente dalla logica degli agenti e dalla rappresentazione grafica. La sua presenza nel dominio consente al DSL di esprimere condizioni spaziali e temporali senza introdurre comportamenti specializzati nell'Engine.
+    - `PoiId` è definito come opaque type, evitando di confondere l'identificatore di un `POI`
+      con un intero generico senza introdurre costi a runtime.
 
 ![Point of Interest Diagram](img/13-poi.png)
 
@@ -123,10 +123,11 @@ La memoria dell'agente è modellata dal trait **`Memory`**, che conserva una lis
 
 ### Azioni e Comportamenti
 
-L'`enum` **`Action[S]`** definisce l'insieme chiuso delle azioni che un agente può intraprendere: spostarsi (`Move`), registrare un evento nella propria memoria (`Remember`), comunicarlo a un destinatario (`Tell`), generare un nuovo agente (`Spawn`) e cessare di esistere (`Die`).
+L'`enum` **`Action[+S]`** definisce l'insieme chiuso delle azioni che un agente può intraprendere: spostarsi (`Move`), registrare un evento nella propria memoria (`Remember`), comunicarlo a un destinatario (`Tell`), generare un nuovo agente (`Spawn`) e cessare di esistere (`Die`).
 
 * **Responsabilità**: costituire il vocabolario dell'intenzione. Un'azione è un **dato**, non un effetto: viene prodotta dal comportamento e interpretata dall'Engine, che è l'unico punto in cui l'intenzione diventa modifica dello stato
 * **Vantaggi**: la decisione resta una funzione pura e facilmente collaudabile, ed è possibile ispezionare le intenzioni prima di applicarle, come avviene per la risoluzione della morte e delle nascite
+* **Scelte di design**: il parametro di tipo è **covariante**. `Spawn` è l'unico caso che trasporta uno stato di dominio, mentre tutti gli altri appartengono ad `Action[Nothing]`: la covarianza li rende quindi utilizzabili qualunque sia lo stato della simulazione, senza doverli ridefinire per ciascuno
 
 Il trait **`Behavior[S]`** associa a un eventuale stato di attivazione la funzione che produce la lista di azioni.
 
@@ -280,7 +281,7 @@ La GUI costituisce il livello responsabile dell'osservazione e del controllo del
 
 L'implementazione del pattern Model-View-Update è distribuita tra `Model`, `Msg`, `Mvu`, `State` e i componenti Swing. `Model` è una struttura dati immutabile che contiene la configurazione, lo stato corrente della simulazione e l'indicazione se l'esecuzione è attiva.
 
-L'enum **`Msg`** rappresenta gli eventi gestiti dalla GUI: avanzamento di un tick, cambio dello stato di esecuzione e riavvio della simulazione. `Mvu.update` traduce 
+L'enum **`Msg`** rappresenta gli eventi gestiti dalla GUI: avanzamento di un tick, cambio dello stato di esecuzione e riavvio della simulazione. `Mvu.update` traduce
 ciascun messaggio in una trasformazione `State[Model[S], Unit]`. La trasformazione viene applicata dalla `SimulationWindow` tramite il metodo `dispatch`, che
 rappresenta l'unico punto in cui il modello viene sostituito. Successivamente `refresh` aggiorna
 i componenti grafici sulla base del nuovo modello.
