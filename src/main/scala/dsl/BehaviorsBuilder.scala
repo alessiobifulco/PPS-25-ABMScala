@@ -5,6 +5,10 @@ import domain.*
 /** A mutable builder used within the DSL context to accumulate a collection of [[Behavior]]s. It provides the
   * foundational scope for defining how agents should act during the simulation.
   *
+  * Mutability is confined to a single declaration block: within the DSL the builder is created by
+  * [[BehaviorsBuilder.behavior]], filled while the block runs and then discarded, so the rest of the library only
+  * receives an immutable list.
+  *
   * @tparam S
   *   The generic type representing the internal state of the Agent.
   */
@@ -17,7 +21,7 @@ trait BehaviorsBuilder[S]:
     */
   def add(behavior: Behavior[S]): Unit
 
-  /** Retrieves all the behaviors accumulated so far.
+  /** Retrieves all the behaviors accumulated so far, in declaration order.
     *
     * @return
     *   A list of the defined [[Behavior]]s.
@@ -30,13 +34,12 @@ object BehaviorsBuilder:
     */
   def apply[S](): BehaviorsBuilder[S] = BehaviorsBuilderImpl[S]()
 
-  /** A DSL entry point for grouping and defining agent behaviors. It evaluates the provided block within a scoped
-    * [[BehaviorsBuilder]] context and automatically registers the collected behaviors into the overarching
-    * [[SimulationBuilder]].
+  /** A DSL entry point for declaring agent behaviors. The block is a context function.
     *
-    * Note: Before registration, behaviors are automatically sorted so that state-specific behaviors take precedence
-    * over universal/fallback ones (i.e., those where `whenState` is empty). The ordering is relevant because the engine
-    * fires only the first applicable [[Behavior]] of the list.
+    * Once the block has run, the behaviors are registered into the [[SimulationBuilder]], with the state-specific ones
+    * before the universal fallbacks (those with an empty `whenState`). The order matters because the engine fires only
+    * the first applicable behavior (see [[engine.SimulationEngine.tick]]); since the sort is stable, behaviors of equal
+    * specificity keep their declaration order.
     *
     * @param block
     *   A context function containing the DSL declarations for the agent's behaviors.

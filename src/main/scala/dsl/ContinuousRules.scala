@@ -6,10 +6,6 @@ import domain.*
   * adapter, allowing the DSL to perform mathematical operations (like averaging or interpolating) on abstract domain
   * states.
   *
-  * Being a type class, the adaptation happens outside the user's type: a domain state becomes continuous by the mere
-  * existence of a given instance in scope, without inheriting anything from the library and without acquiring any
-  * dependency towards it.
-  *
   * @tparam S
   *   The generic type representing the internal state of the Agent.
   */
@@ -29,13 +25,10 @@ trait Continuous[S]:
 object ContinuousRules:
 
   /** A DSL helper that registers a synchronization rule: the agent adjusts its continuous state by blending it towards
-    * the average state of its surrounding neighbors. It is highly useful for modeling consensus, flocking alignment, or
-    * heat diffusion. The rule applies whatever the current state of the agent is, and it fires only when at least one
-    * influencing neighbor is perceived, so that the average is always computed on a non-empty set.
+    * the average state of its surrounding neighbors.
     *
-    * The state type is constrained by the context bound `S: Continuous`, meaning the rule becomes applicable to a
-    * domain state only if the corresponding [[Continuous]] adapter can be summoned in scope: a missing adapter is a
-    * compilation error raised where the rule is declared, never a failure at run time.
+    * The rule applies whatever the current state of the agent is, but only when at least one influencing neighbor
+    * exists, so that the average is never computed on an empty set.
     *
     * @param within
     *   The maximum spatial radius to consider neighbors as influential. Defaults to infinity, and it can only narrow
@@ -44,18 +37,21 @@ object ContinuousRules:
     *   A predicate deciding whether the focus agent (second parameter) is influenced by the neighbor (first parameter),
     *   based on their respective states.
     * @param atRate
-    *   The interpolation factor (speed of convergence) towards the average. 1.0 means instant alignment, lower values
-    *   mean gradual shifts.
+    *   The interpolation factor towards the average, a proportion between 0.0 and 1.0: 1.0 means instant alignment,
+    *   lower values mean gradual shifts.
     * @param builder
     *   The implicit [[RulesBuilder]] where the resulting rule will be stored.
     * @tparam S
     *   The internal state of the Agent, required to be adaptable to a continuous variable.
+    * @throws IllegalArgumentException
+    *   if the convergence rate lies outside the unit interval.
     */
   def convergeTowardsAverage[S: Continuous](
       within: Double = Double.PositiveInfinity,
       among: (S, S) => Boolean = (_: S, _: S) => true,
       atRate: Double = 1.0
   )(using builder: RulesBuilder[S]): Unit =
+    require(atRate >= 0.0 && atRate <= 1.0, "Convergence rate must be between 0 and 1")
 
     val continuous = summon[Continuous[S]]
 

@@ -3,11 +3,13 @@ package engine
 import domain.*
 import domain.Action.*
 
-/** The core execution orchestrator of the simulation. It drives the system forward in discrete time steps (ticks) using
-  * a purely functional, immutable approach. At each tick, it processes a full "perceive-decide-act" cycle: agents
-  * perceive their surroundings, decide on a set of intents based on their behaviors and rules, and the engine resolves
-  * these intents (movement, state transitions, births, deaths, memory updates, and messaging) into a brand-new
-  * simulation state.
+/** The execution core of the simulation. It advances the system in discrete steps (ticks): at each tick every agent
+  * perceives its surroundings, its behaviors and rules produce the actions it intends to perform and its new internal
+  * state, and the engine resolves those actions (movement, births, deaths, memory updates and messages) into a new
+  * [[SimulationState]].
+  *
+  * A tick never modifies the state it receives. It is not fully deterministic, though: newborns get a random velocity,
+  * and behaviors and rules may draw random numbers themselves.
   */
 object SimulationEngine:
 
@@ -16,8 +18,8 @@ object SimulationEngine:
     */
   private case class Intent[S](agent: Agent[S], actions: List[Action[S]])
 
-  /** An internal accumulator used during the "grow" phase to safely aggregate surviving agents and newborns, while
-    * keeping track of the next available unique identifier.
+  /** An internal accumulator used during the "grow" phase: it collects surviving agents and newborns together with the
+    * next available identifier, so that adding agents and assigning identifiers happen in the same step.
     */
   private case class Population[S](agents: List[Agent[S]], nextId: Int):
 
@@ -26,8 +28,8 @@ object SimulationEngine:
     def joinedBy(survivors: List[Agent[S]], newborns: List[Agent[S]]): Population[S] =
       Population(agents ++ survivors ++ newborns, nextId + newborns.size)
 
-  /** Bootstraps the simulation, generating the pristine initial state at tick zero. It calculates the starting point
-    * for ID generation based on the agents pre-existing in the environment.
+  /** Creates the initial state at tick zero. The first identifier assigned to newborns follows the highest one already
+    * in use, so that newborns never collide with the initial agents.
     *
     * @param config
     *   The [[SimulationConfig]] defining the starting setup.
@@ -37,26 +39,30 @@ object SimulationEngine:
   def init[S](config: SimulationConfig[S]): SimulationState[S] =
     SimulationState(config.initialEnvironment, 0, nextAvailableId(config.initialEnvironment.agents))
 
-  /** Advances the simulation by exactly one discrete step, orchestrating the whole pipeline:
-    *   - perceive: a fresh [[AgentContext]] is built for every agent, gathering its neighbors through the configured
-    *     [[NeighborStrategy]] within the perception radius, together with the current tick and residency.
-    *   - decide: the first applicable [[Behavior]] produces the intended [[Action]]s, the agent is displaced by summing
-    *     the requested velocities (keeping the current one when no movement is intended) and letting the
-    *     [[BoundaryPolicy]] resolve the collision with the borders of the space, and the first applicable
-    *     [[InteractionRule]] computes its new internal state.
-    *   - grow: personal actions and lifecycles are applied, so that an agent asking to die leaves the population, an
-    *     agent asking to remember updates its own memory, and every spawn request adds a newborn placed on the parent's
-    *     position with a random velocity and a freshly generated [[AgentId]].
-    *   - deliver: the messages addressed to a specific agent are routed to it and recorded in its memory.
-    *   - residenciesOf: the permanence counters are incremented for the Points of Interest containing the agent and
-    *     reset for the ones it has left.
+  /** Advances the simulation by one tick, through the following phases:
+    *   - perceive: an [[AgentContext]] is built for every agent, with the neighbors found by the configured
+    *     [[NeighborStrategy]] within the perception radius, the current tick and the agent's residency. The neighbor
+    *     search is prepared once per tick and then queried for every agent.
+    *   - decide: the first applicable [[Behavior]] produces the agent's [[Action]]s. The agent moves by the sum of the
+    *     requested velocities, or keeps its current velocity when no movement is requested, and the [[BoundaryPolicy]]
+    *     resolves the crossing of the borders. The first applicable [[InteractionRule]], evaluated on the same context,
+    *     computes the new internal state.
+    *   - grow: an agent asking to die leaves the population, an agent asking to remember updates its own memory, and
+    *     every spawn request adds a newborn with a random velocity and a fresh [[AgentId]], placed where its parent has
+    *     moved during this tick. Death removes only the agent itself: the newborns and the messages it requested in the
+    *     same tick are still produced. The resulting population keeps the order of the previous one, each surviving
+    *     agent followed by the agents it has spawned.
+    *   - deliver: every message is recorded in the memory of the agent it is addressed to; a message addressed to an
+    *     agent that is no longer in the population, or that has no memory, is dropped.
+    *   - residenciesOf: the residency counters are incremented for the Points of Interest containing the agent and
+    *     reset for the others.
     *
     * @param state
     *   The current [[SimulationState]].
     * @param config
     *   The static [[SimulationConfig]] providing the rules and behaviors.
     * @return
-    *   A new, immutable [[SimulationState]] representing the next timeframe of the world.
+    *   The [[SimulationState]] of the next tick.
     */
   def tick[S](state: SimulationState[S], config: SimulationConfig[S]): SimulationState[S] =
     val intents = perceive(state, config).map(decide(state.environment, config))
@@ -78,9 +84,14 @@ object SimulationEngine:
       .map(agent => AgentContext(agent, findNeighbors(agent), state.tick, state.residencyOf(agent.id)))
 
   private def decide[S](environment: Environment[S], config: SimulationConfig[S])(ctx: AgentContext[S]): Intent[S] =
-    val actions = config.behaviors.find(_.appliesTo(ctx)).map(_.actions(ctx)).getOrElse(List.empty)
-    val moved = move(ctx.focus, actions, environment)
-    Intent(config.rules.find(_.appliesTo(ctx)).map(_.newState(ctx)).fold(moved)(moved.withState), actions)
+    val actions = actionsFor(ctx, config.behaviors)
+    Intent(evolved(move(ctx.focus, actions, environment), ctx, config.rules), actions)
+
+  private def actionsFor[S](ctx: AgentContext[S], behaviors: List[Behavior[S]]): List[Action[S]] = behaviors
+    .find(_.appliesTo(ctx)).map(_.actions(ctx)).getOrElse(List.empty)
+
+  private def evolved[S](agent: Agent[S], ctx: AgentContext[S], rules: List[InteractionRule[S]]): Agent[S] = rules
+    .find(_.appliesTo(ctx)).map(_.newState(ctx)).fold(agent)(agent.withState)
 
   private def grow[S](intents: List[Intent[S]], state: SimulationState[S]): Population[S] = intents
     .foldLeft(Population(List.empty[Agent[S]], state.nextId)): (population, intent) =>
@@ -88,14 +99,13 @@ object SimulationEngine:
 
   private def survivors[S](intent: Intent[S], tick: Int): List[Agent[S]] =
     if intent.actions.exists(isDeath) then List.empty
-    else List(intent.actions.foldLeft(intent.agent)((agent, action) => applying(agent, action, tick)))
+    else List(recording(intent.agent, remembered(intent.actions), tick))
 
-  private def applying[S](agent: Agent[S], action: Action[S], tick: Int): Agent[S] = action match
-    case Remember(event) => recording(agent, event, tick)
-    case _               => agent
+  private def remembered[S](actions: List[Action[S]]): List[MemoryEvent] = actions.collect:
+    case Remember(event) => event
 
-  private def recording[S](agent: Agent[S], event: MemoryEvent, tick: Int): Agent[S] = agent
-    .withMemory(agent.memory.map(_.remember(tick, event)))
+  private def recording[S](agent: Agent[S], events: List[MemoryEvent], tick: Int): Agent[S] = agent
+    .withMemory(agent.memory.map(memory => events.foldLeft(memory)(_.remember(tick, _))))
 
   private def isDeath[S](action: Action[S]): Boolean = action match
     case Die() => true
@@ -109,9 +119,10 @@ object SimulationEngine:
     .collect { case Tell(target, event) => (target, event) }
 
   private def deliver[S](agents: List[Agent[S]], messages: List[(AgentId, MemoryEvent)], tick: Int): List[Agent[S]] =
-    agents.map: agent =>
-      messages.collect { case (target, event) if target == agent.id => event }
-        .foldLeft(agent)((recipient, event) => recording(recipient, event, tick))
+    agents.map(agent => recording(agent, inboxOf(agent.id, messages), tick))
+
+  private def inboxOf(id: AgentId, messages: List[(AgentId, MemoryEvent)]): List[MemoryEvent] = messages
+    .filter(_._1 == id).map(_._2)
 
   private def residenciesOf[S](agents: List[Agent[S]], state: SimulationState[S]): Map[AgentId, Residency] = agents
     .map(agent => agent.id -> stayOf(agent, state.environment.pois, state.residencyOf(agent.id))).toMap
@@ -127,8 +138,7 @@ object SimulationEngine:
 
   private def velocityOf[S](actions: List[Action[S]], current: V2d): V2d = moves(actions) match
     case Nil        => current
-    case velocities => velocities.foldLeft(V2d.zero)(_ + _)
+    case velocities => velocities.reduce(_ + _)
 
-  private def moves[S](actions: List[Action[S]]): List[V2d] = actions.flatMap:
-    case Move(v) => List(v)
-    case _       => List.empty
+  private def moves[S](actions: List[Action[S]]): List[V2d] = actions.collect:
+    case Move(velocity) => velocity
