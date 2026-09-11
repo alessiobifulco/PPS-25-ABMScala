@@ -45,22 +45,22 @@ Il trait **`Agent[S]`** rappresenta la singola entità simulata ed è definito c
 * **Responsabilità**:
     * Aggregare le proprietà osservabili di un'entità, senza contenere logica comportamentale
     * Fornire operazioni di aggiornamento non distruttive tramite extension methods (`withMotion`, `withState`, `withMemory`), ciascuna delle quali restituisce una nuova istanza
-    * Esporre in modo sicuro il contenuto della memoria (`remembers`), restituendo una lista vuota quando l'agente non è dotato di memoria, una sorta di getter della memoria
+    * Esporre in modo sicuro il contenuto della memoria (`remembers`), restituendo una lista vuota quando l'agente non è dotato di memoria, con un ruolo analogo a quello di un getter in Java
 * **Scelte di design**:
     * L'implementazione `AgentImpl` è una `case class` **privata**, accessibile solo attraverso il companion object: il client dipende dall'astrazione e la rappresentazione interna resta non vincolata
-    * L'identificatore è un **opaque type** `AgentId` su `Int`: garantisce type-safety a costo zero a runtime, impedendo di confondere un identificatore con un qualunque intero e va a contrastare la primitive obsession
-    * La memoria è `Option[Memory]` perché è una capacità opzionale: le simulazioni che non ne hanno bisogno non pagano né in spazio né in complessità
+    * L'identificatore è un **opaque type** `AgentId` su `Int`: garantisce type-safety senza costi a runtime e impedisce di confondere un identificatore con un qualunque intero, seguendo il principio di evitare la *primitive obsession*
+    * La memoria è `Option[Memory]` perché è una capacità opzionale: nelle simulazioni che non la utilizzano il campo vale `None` e la configurazione non richiede di dichiararne la capacità
 
 ![Agent Diagram](img/01-agent.png)
 
 ### Contesto di Percezione
 
-La `case class` **`AgentContext[S]`** è la fotografia locale del mondo su cui un agente decide: l'agente in esame, i suoi vicini, il tick corrente e la sua permanenza nei punti di interesse, l'idea di fondo è che gli agenti prendano delle decisioni valutando solo il loro contesto locale e da esse scaturisca un pattern soprastante dato dal interazione con tutti gli altri agenti.
+La `case class` **`AgentContext[S]`** è la fotografia locale del mondo su cui un agente decide: l'agente in esame, i suoi vicini, il tick corrente e la sua permanenza nei punti di interesse. Gli agenti decidono sulla base del solo contesto locale, e il comportamento complessivo della simulazione emerge dalle loro interazioni.
 
 * **Responsabilità**:
     * Costituire l'unico canale attraverso cui comportamenti e regole accedono al mondo, garantendo che la decisione sia una funzione della sola informazione locale
     * Offrire interrogazioni derivate tramite extension methods: filtro dei vicini per distanza (`visibleWithin`), raccolta delle credenze udibili dai vicini (`heardBeliefs`), verifica della presenza in un punto di interesse (`isInside`) e della permanenza prolungata al suo interno (`hasSettledIn`)
-* **Scelte di design**: l'alias `type Condition[S] = AgentContext[S] => Boolean` rende il concetto di condizione a funzione di prima classe, rendendo possibile comporre i predicati del DSL con gli operatori `and` e `or` senza definire una gerarchia di classi dedicata, oltre a snellire il codice
+* **Scelte di design**: l'alias `type Condition[S] = AgentContext[S] => Boolean` rende la condizione una funzione di prima classe, così che i predicati del DSL si compongano con gli operatori `and` e `or` senza definire una gerarchia di classi dedicata
 
 ### Ambiente, Confini e Vicinato
 
@@ -86,8 +86,11 @@ celle pertinenti.
       descrizione dell'ambiente dalla logica delle simulazioni;
     - `BoundaryPolicy` separa la scelta del comportamento al confine dalla geometria concreta
       dello spazio;
-    - `NeighborStrategy` astrae l'algoritmo di ricerca dei vicini e permette di scegliere tra
-      l'implementazione `bruteForce` e quella indicizzata `grid`;
+    - `NeighborStrategy` astrae l'algoritmo di ricerca dei vicini, che è l'operazione dominante del
+      tick. Il requisito di prestazioni chiede che sia disponibile una strategia il cui costo non
+      cresca quadraticamente con la popolazione: `grid` risponde a questo requisito limitando i
+      confronti alle celle pertinenti, mentre `bruteForce`, che confronta ogni coppia di agenti,
+      resta la strategia predefinita;
     - l'object `NeighborStrategy` fornisce una strategia predefinita, mantenendo comunque la
       possibilità di configurare esplicitamente l'algoritmo;
     - `withAgents` e `withPois` restituiscono nuove versioni dell'ambiente senza modificarne
@@ -117,7 +120,7 @@ La memoria dell'agente è modellata dal trait **`Memory`**, che conserva una lis
     * Applicare un limite di capacità, mantenendo solo le credenze più recenti
     * Esporre interrogazioni di uso comune: l'ultima credenza (`latest`) e le sole osservazioni di punti di interesse (`sightings`)
 * **Tipi di evento**: l'`enum` **`MemoryEvent`** distingue l'osservazione diretta (`Sighting`, che trasporta identificatore e posizione del punto di interesse) dall'incontro con un altro agente (`Encounter`), lasciando la struttura aperta a ulteriori casi
-* **Scelte di design**: la capacità limitata combinata con le condizioni temporali del DSL (`recentlySighted`, `nothingSightedIn`), consente di esprimere fenomeni come la propagazione e il progressivo esaurimento di un allarme oltre a rimuovere possibili problematiche di prestazioni
+* **Scelte di design**: la capacità limitata, combinata con le condizioni temporali del DSL (`recentlySighted`, `nothingSightedIn`), consente di esprimere fenomeni come la propagazione e il progressivo esaurimento di un allarme, e limita la dimensione della memoria di ciascun agente
 
 ![Memory Diagram](img/02-memory.png)
 
@@ -126,7 +129,7 @@ La memoria dell'agente è modellata dal trait **`Memory`**, che conserva una lis
 L'`enum` **`Action[+S]`** definisce l'insieme chiuso delle azioni che un agente può intraprendere: spostarsi (`Move`), registrare un evento nella propria memoria (`Remember`), comunicarlo a un destinatario (`Tell`), generare un nuovo agente (`Spawn`) e cessare di esistere (`Die`).
 
 * **Responsabilità**: costituire il vocabolario dell'intenzione. Un'azione è un **dato**, non un effetto: viene prodotta dal comportamento e interpretata dall'Engine, che è l'unico punto in cui l'intenzione diventa modifica dello stato
-* **Vantaggi**: la decisione resta una funzione pura e facilmente collaudabile, ed è possibile ispezionare le intenzioni prima di applicarle, come avviene per la risoluzione della morte e delle nascite
+* **Vantaggi**: la decisione non modifica lo stato e può essere verificata a partire da un contesto di prova, ed è possibile ispezionare le intenzioni prima di applicarle, come avviene per la risoluzione della morte e delle nascite
 * **Scelte di design**: il parametro di tipo è **covariante**. `Spawn` è l'unico caso che trasporta uno stato di dominio, mentre tutti gli altri appartengono ad `Action[Nothing]`: la covarianza li rende quindi utilizzabili qualunque sia lo stato della simulazione, senza doverli ridefinire per ciascuno
 
 Il trait **`Behavior[S]`** associa a un eventuale stato di attivazione la funzione che produce la lista di azioni.
@@ -138,12 +141,12 @@ Il trait **`Behavior[S]`** associa a un eventuale stato di attivazione la funzio
 
 ### Regole di Interazione
 
-Il trait **`InteractionRule[S]`** governa l'evoluzione dello stato di dominio, separandola nettamente dal comportamento.
+Il trait **`InteractionRule[S]`** governa l'evoluzione dello stato di dominio, separandola dal comportamento.
 
 * **Responsabilità**:
     * Dichiarare lo stato di partenza (`whenState`) e la condizione contestuale (`context`) che ne abilitano l'applicazione
     * Calcolare il nuovo stato dell'agente a partire dal contesto (`newState`)
-* **Scelte di design**: la distinzione tra `Behavior` e `InteractionRule` riflette la distinzione tra *come un agente agisce* e *come un agente cambia*. Un agente infetto si muove più velocemente perché lo dice un comportamento, ma guarisce perché lo dice una regola; le due dimensioni possono essere modificate indipendentemente
+* **Scelte di design**: la distinzione tra `Behavior` e `InteractionRule` riflette la distinzione tra *come un agente agisce* e *come un agente cambia*. Nella simulazione di esempio `Epidemic` la velocità dell'agente infetto è stabilita da un comportamento e la guarigione da una regola, e le due possono essere modificate indipendentemente
 
 ![Context, Action and Behavior Diagram](img/03-context-action-behavior.png)
 
@@ -162,7 +165,7 @@ La costruzione avviene tramite quattro builder cooperanti — `SimulationBuilder
 * **Meccanismo**: ogni blocco è una **context function** (`Builder[S] ?=> Unit`). Il builder viene creato dal blocco stesso e reso disponibile come parametro `using` a tutte le costruzioni annidate, che possono quindi registrarsi senza mai essere nominate esplicitamente dall'utente. È questo il meccanismo che consente di scrivere `Dead whenAgentIs Infected iff chanceOf(mortalityChance)` come istruzione autonoma, e allo stesso modo le operazioni esposte dall'object `EnvironmentBuilder` utilizzano il builder implicito associato al blocco `environment`
 * **Scelte di design**:
     * Lo stato mutabile è **confinato** nelle implementazioni private dei builder e non sopravvive alla costruzione: l'esito è una `SimulationConfig` immutabile
-    * `BehaviorsBuilder` ordina i comportamenti raccolti in modo che quello di default risulti sempre ultimo, rendendo l'esito indipendente dall'ordine in cui l'utente li ha scritti
+    * `BehaviorsBuilder` ordina i comportamenti raccolti ponendo quelli associati a uno stato prima di quelli di default, così che la posizione del default all'interno del blocco non influisca sull'esito. L'ordinamento è stabile: i comportamenti con la stessa specificità mantengono l'ordine di dichiarazione, che resta la loro priorità
     * Le configurazioni incomplete o incoerenti sono intercettate in fase di costruzione tramite precondizioni e messaggi espliciti
 
 ![DSL Builders Diagram](img/04-dsl-builders.png)
@@ -193,7 +196,8 @@ L'object **`ConditionalBehavior`** introduce il tipo `ActionSource[S]`, alias pe
     * `onlyIf`: subordina l'esecuzione a una condizione sul contesto
     * `vanishingWith`: aggiunge la morte dell'agente con una data probabilità
     * `whenAgentIs`: registra la sorgente come comportamento associato a uno stato, mentre `asDefault` la registra come comportamento generale
-* **Scelte di design**: modellare la sorgente di azioni come semplice alias di funzione, anziché come trait, rende gratuita la composizione e consente all'utente di definire sorgenti personalizzate come normali funzioni, ottenendo automaticamente tutti i combinatori
+* **Scelte di design**: modellare la sorgente di azioni come alias di funzione, anziché come trait, consente di comporre le sorgenti senza classi aggiuntive e permette all'utente di definire sorgenti personalizzate come normali funzioni, che ottengono automaticamente tutti i combinatori. In cambio non è possibile vincolare ulteriormente il tipo delle sorgenti
+* **Casi degeneri**: le sorgenti basate su memoria e vicinato non producono azioni quando l'agente non ha memoria, credenze, avvistamenti o vicini. Sono scritte come for-comprehension, o come conversione di un `Option` in lista seguita da `flatMap`, così che il caso vuoto coincida con il risultato di un generatore privo di elementi. `moveTowards` applicato a un agente che si trova già sul bersaglio produce una velocità nulla, `moveHorizontally` fa partire verso destra un agente privo di velocità orizzontale, e `rememberSightings` produce l'azione a ogni tick trascorso all'interno del punto di interesse, non solo all'ingresso
 
 ![Conditional Behavior Diagram](img/05-conditional-behavior.png)
 
@@ -202,7 +206,7 @@ L'object **`ConditionalBehavior`** introduce il tipo `ActionSource[S]`, alias pe
 L'object **`CompositeBehavior`** implementa il comportamento di stormo, in cui la direzione di un agente nasce dalla somma pesata di più contributi.
 
 * **Responsabilità**: calcolare le componenti di **coesione** verso il baricentro dei simili, **allineamento** alla loro velocità media, **separazione** dagli agenti troppo vicini o da evitare, e **mantenimento della direzione** corrente, combinandole in un'unica azione di movimento
-* **Configurazione**: la classe `FlockConfig` espone i parametri come metodi `infix` incatenabili (`avoid`, `movingAt`, `keepingApart`, `withCohesion`, `withAlignment`, `withSeparation`, `withHeading`), ciascuno dotato di un valore di default sensato
+* **Configurazione**: la classe `FlockConfig` espone i parametri come metodi `infix` incatenabili (`avoid`, `movingAt`, `keepingApart`, `withCohesion`, `withAlignment`, `withSeparation`, `withHeading`), ciascuno dotato di un valore di default
 * **Scelte di design**:
     * L'appartenenza allo stormo non è determinata dall'identità di stato ma da un **predicato binario** sugli stati, il che permette di formare gruppi per similarità e non solo per uguaglianza
     * `FlockConfig` estende `ActionSource`, quindi lo stormo è una sorgente di azioni come tutte le altre e può essere combinato con i medesimi operatori
@@ -223,8 +227,8 @@ L'object **`DiscreteRules`** fornisce la sintassi per le transizioni di stato e 
 
 L'object **`ContinuousRules`** affronta il caso in cui lo stato non sia un insieme finito di casi ma una grandezza numerica.
 
-* **Meccanismo**: il trait **`Continuous[S]`** è una **type class** che estrae un valore numerico dallo stato e vi reinserisce un valore aggiornato. Definendone una given instance, un qualunque tipo di stato diventa idoneo alle regole continue
-* **Regola fornita**: `convergeTowardsAverage` sposta il valore dell'agente verso la media dei vicini influenti, con parametri per il raggio di influenza, il criterio di affinità e il tasso di convergenza, tutti dotati di valori di default
+* **Meccanismo**: il trait **`Continuous[S]`** è una **type class** che estrae un valore numerico dallo stato e vi reinserisce un valore aggiornato. Definendone una given instance, un qualunque tipo di stato diventa idoneo alle regole continue. `convergeTowardsAverage` la richiede come **context bound** (`[S: Continuous]`) e ne recupera l'istanza nel corpo tramite `summon`, mentre il `RulesBuilder` resta un parametro `using` esplicito
+* **Regola fornita**: `convergeTowardsAverage` sposta il valore dell'agente verso la media dei vicini influenti, con parametri per il raggio di influenza, il criterio di affinità e il tasso di convergenza, tutti dotati di valori di default. La regola si applica qualunque sia lo stato dell'agente, purché esista almeno un vicino influente, così che la media non sia calcolata su un insieme vuoto. Il tasso è verificato alla registrazione della regola e deve appartenere all'intervallo [0, 1], altrimenti viene sollevata un'`IllegalArgumentException`
 * **Scelte di design**: l'uso di una type class anziché di un vincolo di ereditarietà mantiene il tipo di stato dell'utente completamente libero: `Opinion` resta una normale `case class`, e l'adattamento al framework è esterno e non invasivo
 
 ![Rules DSL Diagram](img/07-rules-dsl.png)
@@ -243,23 +247,23 @@ L'Engine è il livello che trasforma una configurazione dichiarativa in un'evolu
 
 * **`SimulationConfig[S]`**: aggrega ambiente iniziale, comportamenti, raggio di percezione, regole e strategia di vicinato. È il prodotto del DSL e l'input dell'Engine, che la riceve come valore immutabile senza conoscerne il processo di costruzione
 * **`SimulationState[S]`**: contiene l'ambiente corrente, il tick, il prossimo identificatore disponibile e la mappa delle permanenze nei punti di interesse, esponendo l'accesso sicuro a queste ultime tramite `residencyOf`
-* **Scelte di design**: separare configurazione e stato distingue ciò che è fisso per l'intera simulazione da ciò che evolve, e rende il riavvio un'operazione elementare, ottenuta rigenerando lo stato dalla configurazione immutata
+* **Scelte di design**: separare configurazione e stato distingue ciò che è fisso per l'intera simulazione da ciò che evolve, e riduce il riavvio alla rigenerazione dello stato dalla configurazione immutata
 
 ![Engine Diagram](img/08-engine.png)
 
 ### Pipeline del Tick
 
-Il metodo `tick` è il cuore del sistema e organizza l'aggiornamento in fasi successive, ciascuna affidata a una funzione privata dedicata.
+Il metodo `tick` implementa l'avanzamento di un passo e organizza l'aggiornamento in fasi successive, ciascuna affidata a una funzione privata dedicata.
 
 * **Percezione (`perceive`)**: prepara **una sola volta** la funzione di ricerca dei vicini tramite la strategia configurata, e costruisce per ogni agente il proprio `AgentContext`, completo di vicini, tick e permanenze
-* **Decisione (`decide`)**: seleziona il **primo** comportamento applicabile e ne raccoglie le azioni, applica lo spostamento risultante e infine la **prima** regola applicabile per aggiornare lo stato di dominio. Il risultato è un `Intent`, struttura privata che accoppia l'agente aggiornato alle azioni che ha dichiarato
-* **Evoluzione della popolazione (`grow`)**: attraversa gli intenti accumulando i sopravvissuti e i nuovi nati in una struttura `Population`, che incapsula anche l'assegnazione progressiva degli identificatori garantendone l'unicità
+* **Decisione (`decide`)**: seleziona il **primo** comportamento applicabile e ne raccoglie le azioni (`actionsFor`), applica lo spostamento risultante e infine la **prima** regola applicabile, valutata sullo stesso contesto, per aggiornare lo stato di dominio (`evolved`). Il risultato è un `Intent`, struttura privata che accoppia l'agente aggiornato alle azioni che ha dichiarato
+* **Evoluzione della popolazione (`grow`)**: attraversa gli intenti accumulando i sopravvissuti e i nuovi nati in una struttura `Population`, che incapsula anche l'assegnazione progressiva degli identificatori garantendone l'unicità. La popolazione risultante mantiene l'ordine di quella precedente, con ciascun sopravvissuto seguito dagli agenti che ha generato
 * **Comunicazione (`deliver`)**: estrae dalle azioni tutti i messaggi diretti e li recapita ai rispettivi destinatari, registrandoli nella loro memoria
 * **Permanenze (`residenciesOf`)**: per ogni agente e per ogni punto di interesse, incrementa il contatore di permanenza se l'agente si trova all'interno, azzerandolo altrimenti. È questo meccanismo a rendere esprimibile la condizione `settledIn`, che distingue il transito occasionale dalla sosta effettiva
 * **Scelte di design**:
-    * La scelta del **primo** comportamento e della **prima** regola applicabili rende l'esito deterministico e attribuisce all'ordine di dichiarazione il significato di priorità, coerentemente con l'ordinamento operato dal `BehaviorsBuilder`
-    * Le fasi sono nettamente separate: tutti gli agenti percepiscono lo stato del tick precedente prima che qualunque aggiornamento sia applicato, evitando che l'ordine di elaborazione influenzi il risultato
-    * L'intero tick è una funzione pura da stato a stato, il che rende la simulazione riproducibile e collaudabile senza alcuna infrastruttura di supporto
+    * La scelta del **primo** comportamento e della **prima** regola applicabili rende univoca la selezione e attribuisce all'ordine di dichiarazione il significato di priorità, coerentemente con l'ordinamento operato dal `BehaviorsBuilder`
+    * Le fasi sono separate: tutti gli agenti percepiscono lo stato del tick precedente prima che qualunque aggiornamento sia applicato, evitando che l'ordine di elaborazione influenzi il risultato
+    * Il tick non modifica lo stato ricevuto e ne restituisce uno nuovo, per cui può essere verificato confrontando lo stato prodotto con quello atteso. Le sole componenti non deterministiche sono la velocità iniziale dei nuovi nati e le estrazioni effettuate da comportamenti e regole
 
 ![Simulation Tick Diagram](img/09-engine-tick-sequence.png)
 
@@ -269,9 +273,9 @@ L'Engine è l'unico interprete del vocabolario definito da `Action`.
 
 * **`Move`**: le velocità dichiarate vengono sommate; in assenza di azioni di movimento viene conservata la velocità corrente. La posizione risultante è poi filtrata dalla politica di frontiera dell'ambiente, che restituisce la coppia posizione/velocità definitiva
 * **`Remember`**: l'evento è registrato nella memoria dell'agente con il tick corrente, senza effetto se l'agente non è dotato di memoria
-* **`Tell`**: il messaggio è raccolto e recapitato nella fase di comunicazione, in modo che un agente possa ricevere informazioni anche da agenti elaborati dopo di lui nello stesso tick
-* **`Spawn`**: genera nuovi agenti nella posizione del genitore, con identificatori progressivi e direzione iniziale casuale
-* **`Die`**: la presenza dell'azione esclude l'agente dalla popolazione del tick successivo; poiché la verifica precede l'applicazione delle altre azioni, la morte prevale su qualunque altro effetto dichiarato nello stesso tick
+* **`Tell`**: il messaggio è raccolto e recapitato nella fase di comunicazione, in modo che un agente possa ricevere informazioni anche da agenti elaborati dopo di lui nello stesso tick. Un messaggio diretto a un agente non più presente nella popolazione, o privo di memoria, viene scartato
+* **`Spawn`**: genera nuovi agenti nella posizione raggiunta dal genitore nel tick corrente, con identificatori progressivi e velocità iniziale casuale
+* **`Die`**: la presenza dell'azione esclude l'agente dalla popolazione del tick successivo; poiché la verifica precede l'applicazione delle altre azioni, la morte prevale sugli effetti che riguardano l'agente stesso, mentre le nascite e i messaggi che ha dichiarato nello stesso tick vengono comunque prodotti
 
 ## GUI
 

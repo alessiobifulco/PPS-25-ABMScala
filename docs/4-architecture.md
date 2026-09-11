@@ -49,7 +49,7 @@ Per l'interfaccia grafica è stato adottato il pattern **Model-View-Update (MVU)
 * **Model**: una struttura dati immutabile che descrive per intero ciò che l'interfaccia deve conoscere, ovvero lo
   stato della simulazione, la configurazione da cui è stata generata e l'indicazione se sia in esecuzione o in pausa
 
-* **View**: la funzione che, dato il Model, produce la rappresentazione visiva. Nel nostro caso è realizzata dai
+* **View**: la funzione che, dato il Model, produce la rappresentazione visiva. In questo progetto è realizzata dai
   pannelli Swing, che ridisegnano interamente la scena a partire dall'ultimo Model ricevuto e non conservano alcuno
   stato proprio
 
@@ -120,11 +120,12 @@ Durante la costruzione, i builder accumulano le dichiarazioni in uno stato mutab
 interno e non sopravvive alla chiamata a `build()`. Il risultato è una `SimulationConfig` immutabile, che costituisce
 il confine tra i due mondi: da quel momento in poi nessuna struttura dati viene più modificata.
 
-Durante l'esecuzione, ogni passo è una funzione pura da `SimulationState` a `SimulationState`. Ne discendono tre
-proprietà utili: la simulazione è **riproducibile**, poiché lo stesso stato iniziale produce la stessa evoluzione a
-meno delle sole componenti probabilistiche; è **collaudabile** senza alcuna infrastruttura di supporto, poiché
-verificare un tick significa confrontare due valori; ed è **riavviabile** in modo elementare, poiché basta rigenerare
-lo stato dalla configurazione, che non è mai stata alterata.
+Durante l'esecuzione, ogni passo è una funzione da `SimulationState` a `SimulationState` che non modifica lo stato
+ricevuto e ne restituisce uno nuovo. Il passo non è del tutto deterministico: la velocità iniziale dei nuovi nati è
+estratta a caso, e comportamenti e regole possono a loro volta ricorrere a estrazioni casuali. Ne discendono tre
+proprietà: le componenti non deterministiche restano **circoscritte** a queste estrazioni, e il resto dell'evoluzione
+dipende solo dallo stato di partenza; un tick è **verificabile** confrontando lo stato prodotto con quello atteso; la
+simulazione è **riavviabile** rigenerando lo stato dalla configurazione, che non è mai stata alterata.
 
 ## Principi di Programmazione Funzionale
 
@@ -135,14 +136,15 @@ L'intero progetto è stato sviluppato seguendo principi di programmazione funzio
   nei componenti Swing, dove serve rispettivamente ad accumulare la configurazione e a interfacciarsi con una libreria
   imperativa
 
-* **Funzioni pure**: la decisione di un agente e l'avanzamento della simulazione sono funzioni prive di effetti
-  collaterali. Un comportamento non muove un agente, ma restituisce l'intenzione di muoverlo sotto forma di valore
-  `Action`, che il motore interpreta separatamente. Nel motore non compare alcun ciclo imperativo: nascite e morti,
-  recapito dei messaggi, permanenze sui punti di interesse e composizione delle velocità sono tutti accumuli espressi
-  con `foldLeft`
+* **Funzioni pure**: la decisione di un agente e l'avanzamento della simulazione non modificano alcuno stato
+  esistente e restituiscono nuovi valori; le sole componenti non deterministiche sono le estrazioni casuali. Un
+  comportamento non muove un agente, ma restituisce l'intenzione di muoverlo sotto forma di valore `Action`, che il
+  motore interpreta separatamente. Nel motore non compare alcun ciclo imperativo: nascite e morti, recapito dei
+  messaggi e permanenze sui punti di interesse sono accumuli espressi con `foldLeft`, la composizione delle velocità
+  è una riduzione espressa con `reduce`, e le azioni di un dato tipo sono selezionate con `collect`
 
 * **Higher-order function e composizione**: comportamenti e condizioni sono semplici alias di funzione
-  (`ActionSource`, `Condition`), il che rende la composizione gratuita. I combinatori `to`, `orElse`, `onlyIf`, `and`
+  (`ActionSource`, `Condition`), per cui comporli non richiede classi aggiuntive. I combinatori `to`, `orElse`, `onlyIf`, `and`
   e `or` costruiscono comportamenti e predicati complessi a partire da elementi elementari, senza gerarchie di classi.
   Anche la popolazione iniziale è descritta da funzioni (`Int => S` e `Int => P2d`), valutate dal `SimulationBuilder`
   al momento della costruzione
@@ -150,7 +152,7 @@ L'intero progetto è stato sviluppato seguendo principi di programmazione funzio
 * **Extension method e metodi infix**: le operazioni sono aggiunte ai tipi dall'esterno, senza wrapper e senza
   ereditarietà. È il meccanismo con cui `P2d` e `V2d` espongono l'algebra vettoriale, `Agent` le proprie
   trasformazioni e il DSL le proprie parole chiave: essendo `infix`, `whenAgentIs`, `iff`, `withBoundary` e `withOne`
-  si scrivono senza punto né parentesi, e la dichiarazione risultante si legge come una frase
+  si scrivono senza punto né parentesi, e la dichiarazione assume la forma di una frase
 
 * **Type class**: `Continuous` rende idoneo alle regole continue un qualunque tipo di stato ed è richiesta come
   **context bound** (`[S: Continuous]`), recuperata poi con `summon` nel punto d'uso, mentre `Renderable` e
