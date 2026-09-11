@@ -3,8 +3,8 @@ package dsl
 import domain.*
 import domain.Action.*
 
-/** Provides a rich set of declarative utilities, combinators, and primitive action generators designed to construct
-  * agent behaviors fluidly within the DSL.
+/** The vocabulary with which behaviors are written in the DSL: primitive action sources, the combinators that compose
+  * them, and the operations that register them into the [[BehaviorsBuilder]].
   */
 object ConditionalBehavior:
 
@@ -15,8 +15,8 @@ object ConditionalBehavior:
 
   private val directionChangeChance = 0.05
 
-  /** Extension methods enabling a fluent, declarative algebra over [[ActionSource]] instances. It allows combining,
-    * filtering, conditioning, and chaining actions together.
+  /** Combinators over [[ActionSource]]. Each of them takes action sources and returns an action source, so that the
+    * result of a combination can be combined again.
     */
   extension [S](source: ActionSource[S])
 
@@ -93,7 +93,7 @@ object ConditionalBehavior:
       case _                                                          => List(Move(V2d.random() * speed))
 
   /** Generates a horizontal-only movement, preserving the direction the agent is already heading to, so that the
-    * reversal is left to the [[BoundaryPolicy]] of the space.
+    * reversal is left to the [[BoundaryPolicy]] of the space. An agent with no horizontal velocity starts moving right.
     *
     * @param speed
     *   The movement magnitude.
@@ -103,7 +103,8 @@ object ConditionalBehavior:
       case vx if vx < 0 => List(Move(V2d(-speed, 0)))
       case _            => List(Move(V2d(speed, 0)))
 
-  /** Generates a movement action directed straight towards a specific absolute point.
+  /** Generates a movement action directed straight towards a specific absolute point. An agent already standing on the
+    * target stops, since normalizing the zero vector yields the zero vector.
     *
     * @param target
     *   The destination coordinate ([[P2d]]).
@@ -123,32 +124,31 @@ object ConditionalBehavior:
   def moveAwayFrom[S](target: P2d, speed: Double): ActionSource[S] =
     ctx => List(Move((ctx.focus.position - target).normalized * speed))
 
-  /** Generates a movement action towards the most recent POI sighting kept in memory, if any.
+  /** Generates a movement action towards the most recent POI sighting kept in memory. An agent with no memory, or with
+    * no sighting recorded yet, produces no action.
     *
     * @param speed
     *   The movement magnitude.
     */
-  def moveTowardsRemembered[S](speed: Double): ActionSource[S] = ctx =>
-    rememberedPosition(ctx) match
-      case Some(position) => moveTowards(position, speed)(ctx)
-      case _              => List.empty
+  def moveTowardsRemembered[S](speed: Double): ActionSource[S] =
+    ctx => rememberedPosition(ctx).toList.flatMap(moveTowards(_, speed)(ctx))
 
-  /** Generates a movement action away from the most recent POI sighting kept in memory, if any.
+  /** Generates a movement action away from the most recent POI sighting kept in memory. An agent with no memory, or
+    * with no sighting recorded yet, produces no action.
     *
     * @param speed
     *   The movement magnitude.
     */
-  def moveAwayFromRemembered[S](speed: Double): ActionSource[S] = ctx =>
-    rememberedPosition(ctx) match
-      case Some(position) => moveAwayFrom(position, speed)(ctx)
-      case _              => List.empty
+  def moveAwayFromRemembered[S](speed: Double): ActionSource[S] =
+    ctx => rememberedPosition(ctx).toList.flatMap(moveAwayFrom(_, speed)(ctx))
 
-  /** Generates a memory recording action whenever the agent steps inside any of the specified Points of Interest.
+  /** Generates a memory recording action for every specified Point of Interest currently containing the agent. The
+    * action is produced at every tick the agent spends inside the POI, not only when it enters.
     */
-  def rememberSightings[S](poiList: POI*): ActionSource[S] = ctx =>
-    poiList.toList.filter(poi => ctx.isInside(poi)).map(poi => Remember(MemoryEvent.Sighting(poi.id, poi.position)))
+  def rememberSightings[S](poiList: POI*): ActionSource[S] =
+    ctx => for poi <- poiList.toList if ctx.isInside(poi) yield Remember(MemoryEvent.Sighting(poi.id, poi.position))
 
-  /** Generates an action to halt the movement, requesting a null velocity.
+  /** Generates an action to halt the movement, requesting a zero velocity.
     */
   def stopMoving[S]: ActionSource[S] = _ => List(Move(V2d.zero))
 
@@ -160,21 +160,32 @@ object ConditionalBehavior:
     */
   def spawn[S](state: S): ActionSource[S] = _ => List(Spawn(state))
 
-  /** Generates communication actions to share the agent's latest belief with all perceived neighbors.
+  /** Generates communication actions to share the agent's latest belief with every perceived neighbor. An agent with no
+    * belief, or with no neighbors, produces no action.
     */
   def tellNeighbours[S]: ActionSource[S] = ctx =>
-    ctx.focus.memory.flatMap(_.latest) match
-      case Some(belief) => ctx.neighbors.map(neighbor => Tell(neighbor.id, belief.event))
-      case _            => List.empty
+    for
+      belief <- ctx.focus.memory.flatMap(_.latest).toList
+      neighbor <- ctx.neighbors
+    yield Tell(neighbor.id, belief.event)
 
-  /** Generates a memory-learning action by adopting the most recent belief heard from neighbors.
+  /** Generates a memory-learning action by adopting the most recent belief heard from neighbors. An agent whose
+    * neighbors remember nothing produces no action.
     */
-  def learnFromNeighbours[S]: ActionSource[S] = ctx =>
-    ctx.heardBeliefs.maxByOption(_.at) match
-      case Some(belief) => List(Remember(belief.event))
-      case _            => List.empty
+  def learnFromNeighbours[S]: ActionSource[S] =
+    ctx => for belief <- ctx.heardBeliefs.maxByOption(_.at).toList yield Remember(belief.event)
 
+  /** The position of the most recent sighting kept in memory. It is missing when the agent has no memory or has not
+    * sighted any POI yet; the last step is needed because a belief carries a generic [[MemoryEvent]], and only a
+    * [[MemoryEvent.Sighting]] has a position.
+    */
   private def rememberedPosition[S](ctx: AgentContext[S]): Option[P2d] =
-    ctx.focus.memory.flatMap(_.sightings.lastOption).map(_.event) match
-      case Some(MemoryEvent.Sighting(_, position)) => Some(position)
-      case _                                       => Option.empty
+    for
+      memory <- ctx.focus.memory
+      belief <- memory.sightings.lastOption
+      position <- positionOf(belief.event)
+    yield position
+
+  private def positionOf(event: MemoryEvent): Option[P2d] = event match
+    case MemoryEvent.Sighting(_, position) => Some(position)
+    case _                                 => Option.empty

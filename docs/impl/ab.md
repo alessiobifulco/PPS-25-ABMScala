@@ -465,16 +465,21 @@ punto in cui si usa la regola continua, non a esecuzione.
 La regola di convergenza ha valori di default per il raggio di influenza, il criterio di affinità e il tasso:
 
 ```scala
-def convergeTowardsAverage[S](
+def convergeTowardsAverage[S: Continuous](
     within: Double = Double.PositiveInfinity,
     among: (S, S) => Boolean = (_: S, _: S) => true,
     atRate: Double = 1.0
-)(using continuous: Continuous[S], builder: RulesBuilder[S]): Unit =
+)(using builder: RulesBuilder[S]): Unit =
+  require(atRate >= 0.0 && atRate <= 1.0, "Convergence rate must be between 0 and 1")
+  val continuous = summon[Continuous[S]]
 ```
 
-I due parametri `using` stanno in una lista separata perché non sono dati da trasformare ma contesto: la type class
-dice come leggere lo stato e il builder dice dove registrare la regola, e in entrambi i casi l'utente non ha motivo
-di scriverli a mano.
+La type class è richiesta come **context bound** e recuperata nel corpo con `summon`, mentre il builder resta un
+parametro `using` esplicito. Entrambi sono contesto e non dati da trasformare, ma hanno ruoli diversi: il context
+bound dichiara nella firma un vincolo sul tipo di stato, cioè che sia trattabile come valore continuo, mentre il
+builder indica soltanto dove registrare la regola. In nessuno dei due casi l'utente li scrive a mano. Il tasso è
+verificato alla registrazione: un valore fuori da [0, 1] solleva un'`IllegalArgumentException` alla costruzione
+della simulazione, anziché produrre un comportamento anomalo durante l'esecuzione.
 
 Il corpo calcola la media dei vicini influenti e sposta il valore dell'agente verso di essa in proporzione al tasso.
 La regola è subordinata alla presenza di almeno un vicino influente, perché altrimenti la media andrebbe calcolata
@@ -589,10 +594,18 @@ che tiene insieme l'agente aggiornato e le azioni che ha dichiarato:
 
 ```scala
 private def decide[S](environment: Environment[S], config: SimulationConfig[S])(ctx: AgentContext[S]): Intent[S] =
-  val actions = config.behaviors.find(_.appliesTo(ctx)).map(_.actions(ctx)).getOrElse(List.empty)
-  val moved = move(ctx.focus, actions, environment)
-  Intent(config.rules.find(_.appliesTo(ctx)).map(_.newState(ctx)).fold(moved)(moved.withState), actions)
+  val actions = actionsFor(ctx, config.behaviors)
+  Intent(evolved(move(ctx.focus, actions, environment), ctx, config.rules), actions)
+
+private def actionsFor[S](ctx: AgentContext[S], behaviors: List[Behavior[S]]): List[Action[S]] = behaviors
+  .find(_.appliesTo(ctx)).map(_.actions(ctx)).getOrElse(List.empty)
+
+private def evolved[S](agent: Agent[S], ctx: AgentContext[S], rules: List[InteractionRule[S]]): Agent[S] = rules
+  .find(_.appliesTo(ctx)).map(_.newState(ctx)).fold(agent)(agent.withState)
 ```
+
+La selezione del comportamento e quella della regola sono separate in due funzioni dedicate, e `decide` si limita a
+comporle.
 
 A ogni agente si applicano un solo comportamento e una sola regola: i primi dichiarati fra quelli compatibili con il
 suo stato. L'ordine di dichiarazione vale quindi come priorità, ed è per questo che il builder mette il default in
@@ -632,8 +645,17 @@ viene aggiornato inutilmente:
 ```scala
 private def survivors[S](intent: Intent[S], tick: Int): List[Agent[S]] =
   if intent.actions.exists(isDeath) then List.empty
-  else List(intent.actions.foldLeft(intent.agent)((agent, action) => applying(agent, action, tick)))
+  else List(recording(intent.agent, remembered(intent.actions), tick))
+
+private def remembered[S](actions: List[Action[S]]): List[MemoryEvent] = actions.collect:
+  case Remember(event) => event
+
+private def recording[S](agent: Agent[S], events: List[MemoryEvent], tick: Int): Agent[S] = agent
+  .withMemory(agent.memory.map(memory => events.foldLeft(memory)(_.remember(tick, _))))
 ```
+
+Le azioni `Remember` sono selezionate con `collect` e registrate con un unico `foldLeft` sulla memoria. La stessa
+funzione `recording` è riusata nella fase di comunicazione.
 
 Restituire una lista invece di un `Option` permette di trattare la morte come lista vuota e di concatenare i
 risultati senza conversioni.
@@ -651,9 +673,10 @@ private def messages[S](intents: List[Intent[S]]): List[(AgentId, MemoryEvent)] 
   .collect { case Tell(target, event) => (target, event) }
 
 private def deliver[S](agents: List[Agent[S]], messages: List[(AgentId, MemoryEvent)], tick: Int): List[Agent[S]] =
-  agents.map: agent =>
-    messages.collect { case (target, event) if target == agent.id => event }
-      .foldLeft(agent)((recipient, event) => recording(recipient, event, tick))
+  agents.map(agent => recording(agent, inboxOf(agent.id, messages), tick))
+
+private def inboxOf(id: AgentId, messages: List[(AgentId, MemoryEvent)]): List[MemoryEvent] = messages
+  .filter(_._1 == id).map(_._2)
 ```
 
 Così un agente riceve informazioni anche da agenti elaborati dopo di lui, e il recapito non dipende da dove si trova
@@ -670,8 +693,11 @@ istruzioni prosegue per inerzia invece di fermarsi di colpo:
 ```scala
 private def velocityOf[S](actions: List[Action[S]], current: V2d): V2d = moves(actions) match
   case Nil        => current
-  case velocities => velocities.foldLeft(V2d.zero)(_ + _)
+  case velocities => velocities.reduce(_ + _)
 ```
+
+La lista vuota è gestita dal primo ramo, per cui la somma si esprime con `reduce` senza bisogno di un elemento
+neutro.
 
 La posizione così ottenuta viene passata alla politica di frontiera, che restituisce la coppia posizione/velocità
 definitiva:
