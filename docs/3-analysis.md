@@ -36,8 +36,8 @@ osservarne l'andamento senza leggere il codice.
 - **Dimostrare la flessibilità con simulazioni di esempio**: la genericità del
   framework deve essere sostanziata da simulazioni appartenenti a domini
   differenti, non da una sola estesa a più casi.
-- **Rispetto della scadenza**: il progetto deve essere consegnato entro il termine
-  concordato, pianificando gli sprint in modo da completare per prime le
+- **Rispetto della scadenza**: il progetto deve essere consegnato entro il 18 settembre
+  2026, pianificando gli sprint in modo da completare per prime le
   funzionalità essenziali e collocare nelle iterazioni finali quelle opzionali,
   così che una scadenza anticipata non comprometta la consegna di un prodotto
   funzionante.
@@ -101,7 +101,7 @@ Governa i cambi di **state** di un **agent**:
 - produce il nuovo **state** dell'**agent**.
 
 La separazione fra **behavior** e **interaction rule** riflette una scelta di
-modellazione precisa: un **agent** decide autonomamente come agire in base a chi è,
+modellazione: un **agent** decide autonomamente come agire in base a chi è,
 ma cambia ciò che è solo in conseguenza di un incontro o di una condizione
 dell'**environment**.
 

@@ -15,10 +15,12 @@ la correttezza delle singole unità sia quella delle loro collaborazioni.
 
 I test sono stati scritti in parallelo all'implementazione delle funzionalità, coerentemente
 con la *definition of done* adottata dal team, che considera un task concluso solo quando i
-test relativi alla funzionalità sono presenti e passano in CI. Ogni push sul repository attiva
-la compilazione e l'esecuzione dell'intera suite tramite GitHub Actions.
+test relativi alla funzionalità sono presenti e passano in CI. Ogni push e ogni pull request sui
+branch `main` e `develop` attivano, tramite GitHub Actions, il controllo della formattazione e
+l'esecuzione dell'intera suite con misura della copertura; sul branch `main` viene inoltre
+generato il JAR.
 
-La distinzione tra i due livelli di test segue il criterio presentato a lezione: un test è
+La distinzione tra i due livelli di test segue questo criterio: un test è
 unitario quando verifica una singola unità di comportamento, lo fa rapidamente e lo fa in
 isolamento rispetto alle altre unità e agli altri test; quando una di queste tre condizioni
 non è soddisfatta, il test ricade nella categoria dei test di integrazione. I test di
@@ -26,10 +28,9 @@ integrazione isolano di volta in volta le sole collaborazioni necessarie a verif
 comportamento multi-componente, sostituendo con test double le dipendenze che non sono
 oggetto della verifica.
 
-La scelta di modellare il dominio con strutture **immutabili** e funzioni pure ha semplificato
-notevolmente questa attività: non esistendo stato globale condiviso, ogni caso di test può
-costruire il proprio scenario e valutarne il risultato senza fasi di *teardown* e senza
-dipendenze dall'ordine di esecuzione.
+Il dominio è modellato con strutture **immutabili** e funzioni pure: non esistendo stato globale
+condiviso, ogni caso di test può costruire il proprio scenario e valutarne il risultato senza
+fasi di *teardown* e senza dipendenze dall'ordine di esecuzione.
 
 ## Tecnologie utilizzate
 
@@ -42,8 +43,7 @@ Di ScalaTest sono state sfruttate principalmente:
   (`"A memory" should "start with no beliefs"`), rendendo il nome del test una descrizione
   leggibile della condizione verificata;
 - i **matchers** (`shouldBe`, `should have size`, `should contain`) e il matcher di tolleranza
-  `+-` per i confronti su valori in virgola mobile, che rendono le asserzioni più espressive
-  dei semplici `assert`;
+  `+-` per i confronti su valori in virgola mobile;
 - il costrutto `an[...] should be thrownBy`, usato per verificare il rispetto delle
   precondizioni dei costruttori.
 
@@ -51,8 +51,13 @@ Di Mockito sono stati usati i costrutti di base:
 
 - `mock(classOf[C])` per creare l'implementazione sostitutiva di una dipendenza;
 - `when(...).thenReturn(...)` per configurare la risposta di uno **stub**;
+- gli *argument matcher* `any`, `anyInt` e `anyDouble`, per configurare uno stub
+  indipendentemente dal valore degli argomenti ricevuti;
 - `verify(...)` per controllare che il SUT interagisca con il *depended-on component* nel modo
-  atteso.
+  atteso;
+- `verifyNoMoreInteractions(...)` e `verifyNoInteractions(...)` per controllare che il SUT non
+  effettui chiamate ulteriori rispetto a quelle verificate, o nessuna chiamata, verso una
+  dipendenza.
 
 ## Organizzazione delle suite
 
@@ -75,13 +80,17 @@ isolamento ed evitare che un fallimento riguardi la collaborazione anziché l'un
 
 - **`Memory`** è sostituita da uno stub in `AgentTest`, `ConditionalBehaviorTest` e
   `DiscreteRulesTest`, dove serve a fornire un insieme di credenze noto e stabile senza
-  dipendere dalla politica di scarto della memoria reale.
+  dipendere dalla politica di scarto della memoria reale. In `SimulationEngineTest` è invece un
+  mock che restituisce sé stesso a ogni aggiornamento, e le verifiche riguardano quale evento
+  il motore registra, con quale tick e su quale agente.
 - **`Space`** è sostituito da un mock in `BoundaryPolicyTest`: le politiche di confine si
   limitano a delegare allo spazio, quindi il test verifica il valore restituito e, con
   `verify`, che la delega avvenga effettivamente.
 - **`NeighborStrategy`** è sostituita da un mock in `EnvironmentTest`, per controllare che
   l'ambiente inoltri alla strategia l'agente, la popolazione e il raggio corretti, senza
-  vincolare il test all'algoritmo di ricerca concreto.
+  vincolare il test all'algoritmo di ricerca concreto. In `SimulationEngineTest` la strategia
+  restituisce un vicinato fisso, e si verifica che venga preparata una sola volta per tick con
+  la popolazione e il raggio configurato.
 - **`Environment`** e **`SimulationConfig`** sono sostituiti da stub in `ModelTest` e
   `MvuTest`, così da poter costruire il modello della GUI senza allestire una simulazione
   completa.
@@ -91,14 +100,20 @@ isolamento ed evitare che un fallimento riguardi la collaborazione anziché l'un
 Le collaborazioni tra moduli sono verificate da due gruppi di test.
 
 `SimulationEngineTest` verifica il ciclo di aggiornamento nel suo complesso, cioè
-l'integrazione tra motore, comportamenti, regole di interazione, spazio, memoria e punti di
-interesse. In particolare sono verificati: l'avanzamento del tick, l'applicazione dei
-comportamenti al moto degli agenti, il cambio di stato prodotto dalle regole, la rimozione
-degli agenti che muoiono e l'inserimento di quelli generati con un identificatore fresco, la
-consegna di un evento all'agente destinatario e il conteggio della permanenza all'interno di
-un POI. Nei casi che coinvolgono la memoria, quest'ultima resta sostituita da un mock e
-l'asserzione è espressa su come il motore la utilizza, limitando così l'ampiezza
-dell'integrazione alle sole collaborazioni di interesse.
+l'integrazione tra motore, comportamenti, regole di interazione, spazio, politica di
+frontiera, memoria e punti di interesse, con i casi raggruppati secondo le fasi del tick. In
+particolare sono verificati: l'inizializzazione, con la numerazione dei nuovi nati a partire
+dall'identificatore più alto in uso; l'avanzamento del tick senza modifica dello stato
+ricevuto; la preparazione della ricerca dei vicini una sola volta per tick; la selezione del
+primo comportamento e della prima regola applicabili; la somma delle velocità richieste, o il
+mantenimento di quella corrente in assenza di movimento, e la risoluzione dell'attraversamento
+del confine da parte della politica di frontiera; l'assegnazione di identificatori freschi ai
+nuovi nati, collocati nella posizione raggiunta dal genitore; la rimozione di un agente che
+muore, con la conservazione degli agenti che ha generato nello stesso tick; la consegna di un
+evento al solo agente destinatario; il conteggio delle permanenze consecutive in un POI e il
+suo azzeramento all'uscita. Nei casi che coinvolgono la memoria e la ricerca dei vicini,
+queste restano sostituite da mock e l'asserzione è espressa su come il motore le utilizza,
+limitando così l'ampiezza dell'integrazione alle sole collaborazioni di interesse.
 
 `MvuTest` e `ModelTest` verificano l'integrazione tra la GUI e il motore, controllando che le
 funzioni `init` e `update` del ciclo Model-View-Update producano il modello atteso in risposta
@@ -122,8 +137,9 @@ timer di aggiornamento e che l'esecuzione prolungata non producesse rallentament
 
 ## Grado di copertura
 
-La suite è composta da **29 classi di test** per un totale di **235 casi di test**, che
-coprono tutte le funzionalità principali della libreria:
+La suite è composta da **29 classi di test** per un totale di **232 casi di test**; il report
+di copertura generato in CI indica una copertura delle istruzioni dell'85%. I casi sono
+distribuiti sulle seguenti aree:
 
 - **Geometria e spazio**: operazioni su posizioni e vettori, appartenenza allo spazio,
   politiche di confine, ricerca dei vicini;
@@ -131,28 +147,28 @@ coprono tutte le funzionalità principali della libreria:
   producibili, gestione della memoria a capacità limitata;
 - **DSL**: accumulo ordinato di comportamenti e regole nei builder, costruzione della
   specifica di ambiente, comportamenti composti e condizionali, regole discrete e continue;
-- **Engine**: inizializzazione, avanzamento del tick, applicazione di comportamenti e regole,
-  nascita e morte degli agenti, residenza nei POI;
+- **Engine**: inizializzazione, avanzamento del tick, percezione, applicazione di comportamenti
+  e regole, risoluzione del movimento e dei confini, nascita e morte degli agenti, recapito
+  dei messaggi, residenza nei POI;
 - **GUI**: modello e funzione di aggiornamento MVU, monade di stato, associazione tra stato di
   dominio e rappresentazione grafica.
 
-Particolare attenzione è stata dedicata ai **casi limite e agli input non validi**: il rifiuto
+Sono inoltre verificati i **casi limite e gli input non validi**: il rifiuto
 di dimensioni o raggi non positivi per gli spazi, il rifiuto di una capacità di memoria non
 positiva, la normalizzazione del vettore nullo, il comportamento di un agente privo di vicini e
 la posizione esattamente sul confine dello spazio o sul bordo del raggio di percezione.
 
-La verifica automatica si ferma dove comincia il disegno. I componenti Swing di sola
-presentazione (`SimulationWindow`, `MainMenu`, `SimulationPanel`, `StatisticsPanel`)
-contengono stato mutabile e dipendono direttamente dal toolkit grafico, e sono stati verificati
-con i test di accettazione descritti sopra; le parti della GUI indipendenti dal disegno
+I componenti Swing di sola presentazione
+(`SimulationWindow`, `MainMenu`, `SimulationPanel`, `StatisticsPanel`) contengono stato mutabile e
+dipendono direttamente dal toolkit grafico: non sono coperti da test automatici e sono stati
+verificati con i test di accettazione descritti sopra; le parti della GUI indipendenti dal disegno
 (`Renderable`, `POIRenderable`, `Msg`, `SimulationOption`) sono invece coperte da test
 automatici. Le simulazioni di esempio (`Epidemic`, `AlarmSpreading`, `AntColony`,
 `OpinionDynamics`, `Main`) sono programmi d'uso del DSL, le cui costruzioni sono già coperte
 dalle suite del livello DSL: quello che le riguarda in proprio, ovvero il fenomeno emergente
 atteso, è per sua natura oggetto di osservazione e non di asserzione.
 
-L'esecuzione regolare della suite in CI durante tutto il ciclo di sviluppo ha garantito
-correttezza logica, robustezza rispetto agli input non validi e assenza di regressioni dopo
-ogni refactoring.
+La suite è stata eseguita in CI durante tutto il ciclo di sviluppo, così che le regressioni
+rilevabili dai test emergessero prima dell'integrazione nei branch `main` e `develop`.
 
 [Indice](0-index.md) | [Capitolo Precedente](6-implementation.md) | [Capitolo Successivo](8-retroprospective.md)
