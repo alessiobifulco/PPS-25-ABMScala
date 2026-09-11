@@ -1,98 +1,145 @@
 import domain.*
+import domain.Action.*
 import engine.*
+import org.mockito.ArgumentMatchers.{any, anyDouble, anyInt}
 import org.mockito.Mockito.*
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
+/** Integration suite of [[SimulationEngine]]. Each case runs one or more ticks on real behaviors, rules, space and
+  * boundary policy, and the cases are grouped by the phases described in [[SimulationEngine.tick]].
+  *
+  * Two dependencies are replaced by Mockito mocks, stubbed where the engine needs an answer and verified afterwards:
+  *   - [[NeighborStrategy]] returns a fixed neighborhood, so that perception does not depend on the search algorithm,
+  *     and it is checked to be prepared once per tick with the population and the configured radius;
+  *   - [[Memory]] returns itself on every update and records the calls it receives, so that the assertions concern
+  *     which event the engine stores, with which tick and on which agent, rather than the retention policy of the real
+  *     memory.
+  *
+  * The state type is `String`, since no case relies on properties of the state other than equality.
+  */
 class SimulationEngineTest extends AnyFlatSpec with Matchers:
 
   private val space = RectangularSpace(100.0, 100.0)
-  private val agent = Agent(AgentId(0), P2d(10.0, 10.0), V2d.zero, "healthy")
+  private val radius = 20.0
   private val event = MemoryEvent.Encounter(AgentId(1), true)
 
+  private def agentAt(id: Int, x: Double, state: String = "healthy", velocity: V2d = V2d.zero): Agent[String] =
+    Agent(AgentId(id), P2d(x, 10.0), velocity, state)
+
+  private def withMemory(id: Int, x: Double, memory: Memory): Agent[String] =
+    Agent(AgentId(id), P2d(x, 10.0), V2d.zero, "healthy", Some(memory))
+
   private def configWith(
+      agents: List[Agent[String]],
       behaviors: List[Behavior[String]] = List.empty,
       rules: List[InteractionRule[String]] = List.empty,
-      agents: List[Agent[String]] = List(agent),
-      poiList: List[POI] = List.empty
+      poiList: List[POI] = List.empty,
+      strategy: NeighborStrategy[String] = NeighborStrategy.bruteForce[String]
   ): SimulationConfig[String] =
-    SimulationConfig(Environment(space, agents, BoundaryPolicy.bounce, poiList), behaviors, 20.0, rules)
+    SimulationConfig(Environment(space, agents, BoundaryPolicy.bounce, poiList), behaviors, radius, rules, strategy)
 
-  private def step(config: SimulationConfig[String]): SimulationState[String] = SimulationEngine
-    .tick(SimulationEngine.init(config), config)
+  private def steps(config: SimulationConfig[String], times: Int = 1): SimulationState[String] = (1 to times)
+    .foldLeft(SimulationEngine.init(config))((state, _) => SimulationEngine.tick(state, config))
 
-  "The engine" should "start at tick zero with the initial agents" in:
-    val state = SimulationEngine.init(configWith())
+  private def always(actions: Action[String]*): Behavior[String] = Behavior(Option.empty[String])(_ => actions.toList)
+
+  private def onlyWhen(state: String)(actions: Action[String]*): Behavior[String] =
+    Behavior(Some(state))(_ => actions.toList)
+
+  private def rule(from: Option[String], applies: Boolean, to: String): InteractionRule[String] =
+    InteractionRule(from, (_: AgentContext[String]) => applies)(_ => to)
+
+  /** A memory mock answering every update with itself. Left unstubbed, `remember` would return null, which the engine
+    * would store as the agent's memory and call again at the following tick.
+    */
+  private def memoryMock(): Memory =
+    val memory = mock(classOf[Memory])
+    when(memory.remember(anyInt(), any(classOf[MemoryEvent]))).thenReturn(memory)
+    memory
+
+  "The engine" should "start at tick zero, numbering newborns after the highest identifier in use" in:
+    val agents = List(agentAt(0, 10.0), agentAt(5, 20.0))
+    val state = SimulationEngine.init(configWith(agents))
     state.tick shouldBe 0
-    state.environment.agents shouldBe List(agent)
+    state.environment.agents shouldBe agents
+    state.nextId shouldBe 6
 
-  it should "start from an id greater than the ones already used" in:
-    SimulationEngine.init(configWith()).nextId shouldBe 1
-
-  it should "increase the tick at every step" in:
-    step(configWith()).tick shouldBe 1
-
-  it should "move the agents following their behavior" in:
-    val behavior = Behavior(Option.empty[String])(_ => List(Action.Move(V2d(2.0, 0.0))))
-    step(configWith(behaviors = List(behavior))).environment.agents.head.position shouldBe P2d(12.0, 10.0)
-
-  it should "keep the current velocity when no move is produced" in:
-    val moving = Agent(AgentId(0), P2d(10.0, 10.0), V2d(1.0, 0.0), "healthy")
-    step(configWith(agents = List(moving))).environment.agents.head.position shouldBe P2d(11.0, 10.0)
-
-  it should "change the state of the agents following the rules" in:
-    val rule = InteractionRule(Some("healthy"), (_: AgentContext[String]) => true)(_ => "infected")
-    step(configWith(rules = List(rule))).environment.agents.head.state shouldBe "infected"
-
-  it should "remove the agents that die" in:
-    val behavior = Behavior(Option.empty[String])(_ => List(Action.Die()))
-    step(configWith(behaviors = List(behavior))).environment.agents shouldBe List.empty
-
-  it should "add the spawned agents with a fresh id" in:
-    val behavior = Behavior(Option.empty[String])(_ => List(Action.Spawn("child")))
-    val agents = step(configWith(behaviors = List(behavior))).environment.agents
-    agents should have size 2
-    agents.last.id shouldBe AgentId(1)
-    agents.last.state shouldBe "child"
-
-  it should "store the remembered events in the memory of the agent" in:
-    val memory = mock(classOf[Memory])
-    when(memory.remember(0, event)).thenReturn(memory)
-    val remembering = Agent(AgentId(0), P2d(10.0, 10.0), V2d.zero, "healthy", Some(memory))
-    val behavior = Behavior(Option.empty[String])(_ => List(Action.Remember(event)))
-    step(configWith(behaviors = List(behavior), agents = List(remembering)))
-    verify(memory).remember(0, event)
-
-  it should "deliver a told event to the target agent" in:
-    val memory = mock(classOf[Memory])
-    when(memory.remember(0, event)).thenReturn(memory)
-    val teller = Agent(AgentId(0), P2d(10.0, 10.0), V2d.zero, "teller")
-    val listener = Agent(AgentId(1), P2d(12.0, 10.0), V2d.zero, "listener", Some(memory))
-    val behavior = Behavior(Option.empty[String])(ctx =>
-      if ctx.focus.id == teller.id then List(Action.Tell(listener.id, event)) else List.empty
-    )
-    step(configWith(behaviors = List(behavior), agents = List(teller, listener)))
-    verify(memory).remember(0, event)
-
-  it should "count the ticks spent by an agent inside a poi" in:
-    val poi = POI(PoiId(0), "home", P2d(10.0, 10.0), 5.0)
-    step(configWith(poiList = List(poi))).residencyOf(agent.id).ticksIn(poi.id) shouldBe 1
-
-  it should "reset the residency when the agent leaves the poi" in:
-    val poi = POI(PoiId(0), "home", P2d(10.0, 10.0), 5.0)
-    val behavior = Behavior(Option.empty[String])(_ => List(Action.Move(V2d(50.0, 0.0))))
-    step(configWith(behaviors = List(behavior), poiList = List(poi))).residencyOf(agent.id).ticksIn(poi.id) shouldBe 0
-
-  it should "let an agent be tracked between two ticks" in:
-    val config = configWith(behaviors = List(Behavior(Option.empty[String])(_ => List(Action.Move(V2d(1.0, 0.0))))))
+  it should "advance the tick by one without modifying the state it receives" in:
+    val config = configWith(List(agentAt(0, 10.0)), behaviors = List(always(Move(V2d(1.0, 0.0)))))
     val start = SimulationEngine.init(config)
-    val end = (1 to 3).foldLeft(start)((state, _) => SimulationEngine.tick(state, config))
+    val next = SimulationEngine.tick(start, config)
+    next.tick shouldBe 1
+    next.environment.agents.head.position shouldBe P2d(11.0, 10.0)
+    start.tick shouldBe 0
     start.environment.agents.head.position shouldBe P2d(10.0, 10.0)
-    end.tick shouldBe 3
-    end.environment.agents.head.position shouldBe P2d(13.0, 10.0)
 
-  it should "evolve in the same way from the same initial state" in:
-    val config = configWith(behaviors = List(Behavior(Option.empty[String])(_ => List(Action.Move(V2d(1.0, 0.0))))))
-    val first = SimulationEngine.tick(SimulationEngine.init(config), config)
-    val second = SimulationEngine.tick(SimulationEngine.init(config), config)
-    first.environment.agents.map(_.position) shouldBe second.environment.agents.map(_.position)
+  "The perception phase" should "prepare the neighbor search once per tick and offer its result to every agent" in:
+    val agents = List(agentAt(0, 10.0), agentAt(1, 50.0), agentAt(2, 90.0))
+    val strategy = mock(classOf[NeighborStrategy[String]])
+    val neighborhood = (_: Agent[String]) => List(agents.last)
+    when(strategy.prepare(any(classOf[List[Agent[String]]]), anyDouble())).thenReturn(neighborhood)
+    val counting = Behavior(Option.empty[String])(ctx => List(Move(V2d(0.0, ctx.neighbors.size.toDouble))))
+    val moved = steps(configWith(agents, behaviors = List(counting), strategy = strategy)).environment.agents
+    moved.map(_.position.y) shouldBe List(11.0, 11.0, 11.0)
+    verify(strategy).prepare(agents, radius)
+    verifyNoMoreInteractions(strategy)
+
+  "The decision phase" should "fire only the first applicable behavior, skipping those bound to another state" in:
+    val behaviors =
+      List(onlyWhen("infected")(Move(V2d(1.0, 0.0))), always(Move(V2d(0.0, 1.0))), always(Move(V2d(5.0, 5.0))))
+    steps(configWith(List(agentAt(0, 10.0)), behaviors = behaviors)).environment.agents.head.position shouldBe
+      P2d(10.0, 11.0)
+
+  it should "fire only the first applicable rule, skipping those whose condition does not hold" in:
+    val rules = List(
+      rule(Some("healthy"), applies = false, to = "infected"),
+      rule(None, applies = true, to = "immune"),
+      rule(Some("healthy"), applies = true, to = "dead")
+    )
+    steps(configWith(List(agentAt(0, 10.0)), rules = rules)).environment.agents.head.state shouldBe "immune"
+
+  "The movement resolution" should "sum the requested velocities, or keep the current one when none is requested" in:
+    val mover = agentAt(0, 10.0)
+    val drifter = agentAt(1, 50.0, state = "drifting", velocity = V2d(1.0, 0.0))
+    val behaviors = List(onlyWhen("healthy")(Move(V2d(2.0, 0.0)), Move(V2d(0.0, 3.0))))
+    steps(configWith(List(mover, drifter), behaviors = behaviors)).environment.agents.map(_.position) shouldBe
+      List(P2d(12.0, 13.0), P2d(51.0, 10.0))
+
+  it should "let the boundary policy resolve a movement crossing the border" in:
+    val config = configWith(List(agentAt(0, 98.0)), behaviors = List(always(Move(V2d(5.0, 0.0)))))
+    val bounced = steps(config).environment.agents.head
+    bounced.position shouldBe P2d(100.0, 10.0)
+    bounced.velocity shouldBe V2d(-5.0, 0.0)
+
+  "The population phase" should "give every newborn a fresh identifier and place it where its parent has moved" in:
+    val parenting = always(Move(V2d(1.0, 0.0)), Spawn("first"), Spawn("second"))
+    val state = steps(configWith(List(agentAt(0, 10.0)), behaviors = List(parenting)))
+    state.environment.agents.map(_.id.value) shouldBe List(0, 1, 2)
+    state.environment.agents.map(_.position).distinct shouldBe List(P2d(11.0, 10.0))
+    state.nextId shouldBe 3
+
+  it should "remove an agent asking to die, keeping the agents it spawned in the same tick" in:
+    val config = configWith(List(agentAt(0, 10.0)), behaviors = List(always(Spawn("child"), Die())))
+    steps(config).environment.agents.map(_.state) shouldBe List("child")
+
+  it should "deliver a told event to the addressed agent only" in:
+    val listenerMemory = memoryMock()
+    val bystanderMemory = mock(classOf[Memory])
+    val teller = agentAt(0, 10.0, state = "teller")
+    val listener = withMemory(1, 12.0, listenerMemory)
+    val bystander = withMemory(2, 14.0, bystanderMemory)
+    steps(configWith(List(teller, listener, bystander), behaviors = List(onlyWhen("teller")(Tell(listener.id, event)))))
+    verify(listenerMemory).remember(0, event)
+    verifyNoInteractions(bystanderMemory)
+
+  "The residency tracking" should "count the consecutive ticks spent inside a poi, resetting the count on leaving" in:
+    val poi = POI(PoiId(0), "home", P2d(10.0, 10.0), 5.0)
+    val resident = agentAt(0, 10.0)
+    val leaver = agentAt(1, 12.0, state = "leaving")
+    val leaving = Behavior(Some("leaving"))(ctx =>
+      if ctx.residency.ticksIn(poi.id) >= 2 then List(Move(V2d(50.0, 0.0))) else List(Move(V2d.zero))
+    )
+    val state = steps(configWith(List(resident, leaver), behaviors = List(leaving), poiList = List(poi)), times = 3)
+    state.residencyOf(resident.id).ticksIn(poi.id) shouldBe 3
+    state.residencyOf(leaver.id).ticksIn(poi.id) shouldBe 0

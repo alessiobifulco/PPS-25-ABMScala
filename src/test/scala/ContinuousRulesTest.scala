@@ -46,3 +46,7 @@ class ContinuousRulesTest extends AnyFlatSpec with Matchers:
     given builder: RulesBuilder[Opinion] = RulesBuilder[Opinion]()
     convergeTowardsAverage[Opinion](among = (a, b) => math.abs(a.value - b.value) <= 1.0)
     builder.rules.head.appliesTo(ctx) shouldBe false
+
+  it should "reject a convergence rate outside the unit interval" in:
+    given RulesBuilder[Opinion] = RulesBuilder[Opinion]()
+    an[IllegalArgumentException] should be thrownBy convergeTowardsAverage[Opinion](atRate = 1.5)
