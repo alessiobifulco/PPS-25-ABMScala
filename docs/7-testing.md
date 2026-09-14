@@ -170,5 +170,3 @@ atteso, è per sua natura oggetto di osservazione e non di asserzione.
 
 La suite è stata eseguita in CI durante tutto il ciclo di sviluppo, così che le regressioni
 rilevabili dai test emergessero prima dell'integrazione nei branch `main` e `develop`.
-
-[Indice](0-index.md) | [Capitolo Precedente](6-implementation.md) | [Capitolo Successivo](8-retroprospective.md)

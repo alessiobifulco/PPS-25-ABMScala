@@ -361,5 +361,3 @@ Le quattro simulazioni incluse sono state usate per validare l'espressività del
 * **Alarm Spreading**: esercita la propagazione dell'informazione e il suo esaurimento, combinando le condizioni temporali sulla memoria, il posizionamento iniziale personalizzato e la fuga da un punto di interesse
 
 ![Simulations Diagram](img/10-simulations.png)
-
-[Indice](0-index.md) | [Capitolo Precedente](4-architecture.md) | [Capitolo Successivo](6-implementation.md)

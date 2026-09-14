@@ -322,5 +322,3 @@ popolazione.
   requisiti di testabilità.
 - **Versioning e collaborazione**: Git e GitHub, con GitHub Actions per l'esecuzione
   automatica della suite di test a ogni integrazione.
-
-[Indice](0-index.md) | [Capitolo Precedente](2-process.md) | [Capitolo Successivo](4-architecture.md)

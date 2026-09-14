@@ -491,5 +491,3 @@ dal dominio applicativo.
 
 Il risultato è una `GUI` riutilizzabile per simulazioni con stati, geometrie e punti di interesse differenti, senza duplicare la logica dell'`Engine` e senza imporre
 vincoli di ereditarietà ai tipi definiti dall'utente.
-
-[Indice](../0-index.md) | [Capitolo Precedente](../6-implementation.md) | [Capitolo Successivo](../7-testing.md)

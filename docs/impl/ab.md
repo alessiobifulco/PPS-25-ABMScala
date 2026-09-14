@@ -783,5 +783,3 @@ posizione, o una regola la cui condizione ignora lo stato di partenza: il compil
 problema si vede solo guardando l'esecuzione. Con il DSL quelle due situazioni non sono esprimibili, perché la
 registrazione passa dai combinatori e l'ordinamento lo fa il builder. Restano naturalmente possibili altri errori,
 per esempio una condizione logicamente sbagliata, che nessun controllo di tipo può intercettare.
-
-[Indice](../0-index.md) | [Capitolo Precedente](../6-implementation.md) | [Capitolo Successivo](../7-testing.md)
