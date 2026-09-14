@@ -60,5 +60,3 @@ Nel corso di questo documento verrà illustrato il processo di sviluppo adottato
 l'analisi dei requisiti, il design architetturale e di dettaglio, le scelte
 implementative rilevanti, la strategia di testing adottata e una retrospettiva
 finale sull'andamento del progetto.
-
-[Indice](0-index.md) | [Capitolo Successivo](2-process.md)

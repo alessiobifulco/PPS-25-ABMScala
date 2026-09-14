@@ -34,5 +34,3 @@ Per ogni sprint è stato creato un file `sprintN.md` contenente:
 | [Sprint 2](sprint2.md) | Engine di Simulazione e Prime Simulazioni        | 01/08/2026 |
 | [Sprint 3](sprint3.md) | DSL Dichiarativo e View Monadica                 | 08/08/2026 |
 | [Sprint 4](sprint4.md) | Memory, Point of Interest e Simulazioni Avanzate | 28/08/2026 |
-
-[Indice](../0-index.md)
