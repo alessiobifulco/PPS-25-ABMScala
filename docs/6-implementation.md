@@ -18,5 +18,3 @@ progetto.
 
 * [Implementazione - AB](impl/ab.md)
 * [Implementazione - SF](impl/sf.md)
-
-[Indice](0-index.md) | [Capitolo Precedente](5-design.md) | [Capitolo Successivo](7-testing.md)

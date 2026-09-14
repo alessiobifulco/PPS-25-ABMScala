@@ -143,5 +143,3 @@ riscritture della sintassi del DSL e la taratura dei parametri hanno assorbito o
 pianificazione più consapevole avrebbe potuto contenere. Ciò è principalmente dovuto al fatto che 
 il sistema fosse un astrazione partendo da zero senza una possiible base da seguire, e l'esperienza 
 acquisita da tale sfida è essa stessa un risultato del progetto.
-
-[Indice](0-index.md) | [Capitolo Precedente](7-testing.md)

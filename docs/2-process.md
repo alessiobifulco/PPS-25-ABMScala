@@ -89,5 +89,3 @@ GitHub Actions:
 Il product backlog e i report di ogni sprint sono mantenuti in versione
 nella cartella `process/` del repository, in modo da rendere verificabile
 a posteriori la storia del progetto.
-
-[Indice](0-index.md) | [Capitolo Precedente](1-intro.md) | [Capitolo Successivo](3-analysis.md)
