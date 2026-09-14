@@ -1,0 +1,10 @@
+title: "ABMScala"
+description: Framework in Scala 3 per simulazioni agent-based, con un DSL dichiarativo per configurare ambiente, comportamenti e regole di interazione.
+remote_theme: just-the-docs/just-the-docs@v0.10.0
+search_enabled: false
+color_scheme: light
+nav_enabled: true
+
+nav_external_links:
+  - title: Repository on GitHub
+    url: https://github.com/alessiobifulco/PPS-25-ABMScala
