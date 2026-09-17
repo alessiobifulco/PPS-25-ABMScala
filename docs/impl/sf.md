@@ -1,5 +1,5 @@
 ---
-title: Samuele Ferri
+title: SF
 nav_order: 2
 parent: Implementazione
 ---
